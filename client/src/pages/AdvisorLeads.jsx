@@ -61,7 +61,10 @@ function getMonthDays(year, month) {
 
 function formatDateKey(date) {
   const d = new Date(date);
-  return d.toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function DetailBox({ label, children, className = "" }) {
@@ -500,7 +503,7 @@ const handleModalCall = async () => {
 
                         <td className="px-5 py-4">
                           <span
-                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                            className={`inline-flex whitespace-nowrap rounded-full border px-3.5 py-1 text-xs font-semibold ${
                               statusStyles[lead.status] || statusStyles.CLOSED
                             }`}
                           >
