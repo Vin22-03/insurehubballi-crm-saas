@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  ADVISOR
+}
+
+enum PasswordResetRequestStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  FOLLOW_UP
+  INTERESTED
+  NOT_INTERESTED
+  CONVERTED
+  CLOSED
+}
+
+enum ContactSourceType {
+  MANUAL
+  EXCEL
+}
+
+enum ActivityType {
+  CALL
+  WHATSAPP
+  NOTE
+  STATUS_CHANGE
+  TEMPLATE_SHARED
+  LEAD_CREATED
+  CONTACT_CREATED
+}
+
+enum ActivitySourcePage {
+  LEADS_PAGE
+  CONTACTS_PAGE
+  DASHBOARD_PAGE
+}
+
+model User {
+  id                   Int                    @id @default(autoincrement())
+  name                 String
+  phone                String                 @unique
+  password             String
+  role                 Role
+  isActive             Boolean                @default(true)
+  mustChangePassword   Boolean                @default(false)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  advisorCompanies     AdvisorCompany[]
+  createdLeads         Lead[]                 @relation("LeadCreatedBy")
+  assignedLeads        Lead[]                 @relation("LeadAssignedTo")
+  createdContacts      Contact[]              @relation("ContactCreatedBy")
+  leadActivities       LeadActivity[]         @relation("LeadActivityDoneBy")
+  resetRequestsRaised  PasswordResetRequest[] @relation("UserResetRequests")
+  resetRequestsHandled PasswordResetRequest[] @relation("AdminHandledRequests")
+}
+
+model Company {
+  id          Int              @id @default(autoincrement())
+  code        String           @unique
+  name        String           @unique
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  templates   Template[]
+  advisors    AdvisorCompany[]
+  leads       Lead[]
+  activities  LeadActivity[]
+}
+
+model AdvisorCompany {
+  id         Int      @id @default(autoincrement())
+  advisorId  Int
+  companyId  Int
+  createdAt  DateTime @default(now())
+
+  advisor    User     @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([advisorId, companyId])
+}
+
+model Template {
+  id          Int            @id @default(autoincrement())
+  companyId   Int
+  title       String
+  tagline     String?
+  body        String         @db.LongText
+  minAge      Int?
+  maxAge      Int?
+  pdfUrl      String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  activities  LeadActivity[]
+
+  @@index([companyId])
+  @@index([minAge, maxAge])
+}
+
+model Contact {
+  id             Int               @id @default(autoincrement())
+  name           String
+  phone          String
+  altPhone       String?
+  age            Int?
+  city           String?
+  sourceNote     String?
+  importSource   ContactSourceType @default(MANUAL)
+  importBatchId  String?
+  isDeleted      Boolean           @default(false)
+  createdById    Int
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  createdBy      User              @relation("ContactCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  lead           Lead?
+  activities     LeadActivity[]
+
+  @@index([createdById])
+  @@index([phone])
+}
+
+model Lead {
+  id             Int          @id @default(autoincrement())
+  name           String
+  phone          String
+  altPhone       String?
+  age            Int?
+  city           String?
+  status         LeadStatus   @default(NEW)
+  remarks        String?
+  nextFollowUpAt DateTime?
+  companyId      Int?
+  contactId      Int?         @unique
+  createdById    Int
+  assignedToId   Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  company        Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact        Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  createdBy      User         @relation("LeadCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo     User         @relation("LeadAssignedTo", fields: [assignedToId], references: [id], onDelete: Restrict)
+  activities     LeadActivity[]
+
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([companyId])
+  @@index([phone])
+  @@index([status])
+}
+
+model LeadActivity {
+  id             Int                @id @default(autoincrement())
+  leadId         Int?
+  contactId      Int?
+  advisorId      Int
+  companyId      Int?
+  templateId     Int?
+  activityType   ActivityType
+  sourcePage     ActivitySourcePage
+  note           String?
+  nextFollowUpAt DateTime?
+  createdAt      DateTime           @default(now())
+
+  lead           Lead?              @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contact        Contact?           @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  advisor        User               @relation("LeadActivityDoneBy", fields: [advisorId], references: [id], onDelete: Cascade)
+  company        Company?           @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  template       Template?          @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([contactId])
+  @@index([advisorId])
+  @@index([companyId])
+  @@index([templateId])
+  @@index([activityType])
+  @@index([sourcePage])
+}
+
+model PasswordResetRequest {
+  id           Int                        @id @default(autoincrement())
+  userId       Int
+  requestedBy  String
+  requestNote  String?
+  status       PasswordResetRequestStatus @default(PENDING)
+  adminNote    String?
+  handledById  Int?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  completedAt  DateTime?
+
+  user         User  @relation("UserResetRequests", fields: [userId], references: [id], onDelete: Cascade)
+  handledBy    User? @relation("AdminHandledRequests", fields: [handledById], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([handledById])
+  @@index([status])
+}
