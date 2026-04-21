@@ -160,20 +160,20 @@ function Login() {
 
       <div className="pointer-events-none absolute right-8 top-8 z-20 hidden lg:flex items-center gap-2 text-sm text-white/75">
         <ShieldCheck size={18} />
-        <span>Trusted • Secure • Reliable</span>
+        <span>Powered by insurehubballi</span>
       </div>
 
       {/* Layout */}
       <div className="relative z-10 mx-auto grid min-h-screen max-w-[1600px] lg:grid-cols-[1fr_1fr]">
         {/* Left side */}
-        <div className="hidden lg:flex items-center justify-end px-10 xl:px-16">
+        <div className="hidden lg:flex items-center justify-center px-10 xl:px-16">
           <div className="w-full max-w-[560px] pr-4">
             <div className="mb-8">
               <div className="inline-flex rounded-[2.7rem] border border-blue-200/30 bg-white/95 p-4 shadow-[0_0_55px_rgba(96,165,250,0.35)]">
                 <img
                   src={logo}
                   alt="insurehubballi"
-                  className="h-[190px] w-[190px] rounded-[2rem] object-contain"
+                  className="h-[220px] w-[220px] rounded-[2rem] object-contain"
                 />
               </div>
             </div>
@@ -185,10 +185,9 @@ function Login() {
               <br />
               <span className="bg-gradient-to-r from-blue-500 via-sky-400 to-cyan-300 bg-clip-text text-transparent">
                 Grow smarter.
+                <div className="mt-6 h-[3px] w-16 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"></div>
               </span>
             </h1>
-
-            <div className="mt-6 h-1 w-20 rounded-full bg-gradient-to-r from-sky-400 to-cyan-300" />
 
             <p className="mt-8 max-w-[500px] text-[17px] leading-9 text-blue-100/78">
               A premium CRM experience built for insurance advisors and admins.
@@ -217,7 +216,7 @@ function Login() {
               </div>
 
               <h1 className="mt-6 text-4xl font-extrabold tracking-tight">
-                Welcome back
+                insurehubballi
               </h1>
               <p className="mt-2 text-sm text-blue-100/70">
                 Login to your insurance CRM dashboard
@@ -308,8 +307,11 @@ function Login() {
                 <button
                   onClick={handleLogin}
                   disabled={loading}
-                  className="group flex h-[86px] w-full items-center justify-center rounded-[1.3rem] bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 px-6 text-[20px] font-semibold text-white shadow-[0_14px_45px_rgba(37,99,235,0.35)] transition hover:brightness-110 disabled:opacity-60"
-                >
+className="group flex h-[70px] w-full items-center justify-center rounded-xl 
+bg-gradient-to-r from-blue-600 to-cyan-500 
+text-lg font-semibold 
+shadow-lg transition-all duration-300
+hover:scale-[1.02] hover:shadow-[0_10px_40px_rgba(37,99,235,0.5)]"                >
                   <span>{loading ? "Logging in..." : "Login to Dashboard"}</span>
                   <ArrowRight
                     className="ml-4 transition-transform duration-300 group-hover:translate-x-1"
