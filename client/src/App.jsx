@@ -6,6 +6,8 @@ import { useAuth } from "./context/AuthContext";
 import AdminAdvisors from "./pages/AdminAdvisors";
 import AdminTemplates from "./pages/AdminTemplates";
 import AdvisorLeads from "./pages/AdvisorLeads";
+import AdminAdvisorPerformance from "./pages/AdminAdvisorPerformance";
+import AdminAdvisorLeads from "./pages/AdminAdvisorLeads";
 function ProtectedRoute({ children, allowedRole }) {
   const { user } = useAuth();
 
@@ -63,6 +65,22 @@ function App() {
   element={
     <ProtectedRoute allowedRole="ADVISOR">
       <AdvisorLeads />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/admin/advisors/performance"
+  element={
+    <ProtectedRoute allowedRole="ADMIN">
+      <AdminAdvisorPerformance />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/admin/advisors/:advisorId/leads"
+  element={
+    <ProtectedRoute allowedRole="ADMIN">
+      <AdminAdvisorLeads />
     </ProtectedRoute>
   }
 />

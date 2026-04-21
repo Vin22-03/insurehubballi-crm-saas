@@ -14,6 +14,8 @@ toggleAdvisorStatus,
 updateTemplate,
 toggleTemplateStatus,
 deleteTemplate,
+getAdvisorPerformance,
+getAdvisorLeadsForAdmin,
 } from "../controllers/adminController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
@@ -23,6 +25,14 @@ router.post("/advisors", protect, adminOnly, createAdvisor);
 router.get("/advisors", protect, adminOnly, getAllAdvisors);
 router.post("/templates", protect, adminOnly, createTemplate);
 router.get("/templates", protect, adminOnly, getAllTemplates);
+router.get("/advisors/performance", protect, adminOnly, getAdvisorPerformance);
+router.get(
+  "/advisors/:advisorId/leads",
+  protect,
+  adminOnly,
+  getAdvisorLeadsForAdmin
+);
+
 
 router.get("/companies", protect, adminOnly, getAllCompanies);
 

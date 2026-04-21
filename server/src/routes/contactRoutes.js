@@ -13,5 +13,7 @@ router.post("/", protect, createContact);
 router.get("/", protect, getContacts);
 router.post("/:contactId/convert-to-lead", protect, convertContactToLead);
 router.post("/:contactId/activities", protect, addContactActivity);
+router.post("/bulk-delete", protect, bulkDeleteContacts);
+router.get("/batches", protect, getContactBatches);
 
 export default router;

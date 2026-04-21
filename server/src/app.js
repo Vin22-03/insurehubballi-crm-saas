@@ -7,6 +7,7 @@ import templateRoutes from "./routes/templateRoutes.js";
 import leadRoutes from "./routes/leadRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+
 dotenv.config();
 
 const app = express();

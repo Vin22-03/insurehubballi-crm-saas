@@ -705,6 +705,205 @@ export const toggleTemplateStatus = async (req, res) => {
   }
 };
 
+export const getAdvisorPerformance = async (req, res) => {
+  try {
+    const advisors = await prisma.user.findMany({
+      where: {
+        role: "ADVISOR",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        isActive: true,
+        createdAt: true,
+        assignedLeads: {
+          select: {
+            id: true,
+            status: true,
+            nextFollowUpAt: true,
+            activities: {
+              orderBy: {
+                createdAt: "desc",
+              },
+              take: 1,
+              select: {
+                id: true,
+                activityType: true,
+                note: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const performance = advisors.map((advisor) => {
+      const leads = advisor.assignedLeads || [];
+
+      const totalLeads = leads.length;
+      const newLeads = leads.filter((lead) => lead.status === "NEW").length;
+      const followUpLeads = leads.filter((lead) => lead.status === "FOLLOW_UP").length;
+      const interestedLeads = leads.filter((lead) => lead.status === "INTERESTED").length;
+      const convertedLeads = leads.filter((lead) => lead.status === "CONVERTED").length;
+      const closedLeads = leads.filter((lead) =>
+        ["CLOSED", "NOT_INTERESTED"].includes(lead.status)
+      ).length;
+
+      const todayFollowUps = leads.filter((lead) => {
+        if (!lead.nextFollowUpAt) return false;
+        const followDate = new Date(lead.nextFollowUpAt);
+        return followDate >= todayStart && followDate <= todayEnd;
+      }).length;
+
+      const allLatestActivities = leads
+        .flatMap((lead) => lead.activities || [])
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      const lastActivity = allLatestActivities[0] || null;
+
+      const conversionRate =
+        totalLeads > 0
+          ? Number(((convertedLeads / totalLeads) * 100).toFixed(1))
+          : 0;
+
+      const performanceScore =
+        convertedLeads * 5 +
+        interestedLeads * 3 +
+        followUpLeads * 1 +
+        totalLeads * 0.25;
+
+      return {
+        id: advisor.id,
+        name: advisor.name,
+        phone: advisor.phone,
+        isActive: advisor.isActive,
+        totalLeads,
+        newLeads,
+        followUpLeads,
+        interestedLeads,
+        convertedLeads,
+        closedLeads,
+        todayFollowUps,
+        conversionRate,
+        performanceScore,
+        lastActivity: lastActivity
+          ? {
+              activityType: lastActivity.activityType,
+              note: lastActivity.note || "",
+              createdAt: lastActivity.createdAt,
+            }
+          : null,
+      };
+    });
+
+    const teamSummary = {
+      totalAdvisors: performance.length,
+      activeAdvisors: performance.filter((item) => item.isActive).length,
+      totalLeads: performance.reduce((sum, item) => sum + item.totalLeads, 0),
+      totalConverted: performance.reduce((sum, item) => sum + item.convertedLeads, 0),
+    };
+
+    return res.status(200).json({
+      message: "Advisor performance fetched successfully.",
+      summary: teamSummary,
+      advisors: performance,
+    });
+  } catch (error) {
+    console.error("getAdvisorPerformance error:", error);
+    return res.status(500).json({
+      message: "Server error.",
+    });
+  }
+};
+export const getAdvisorLeadsForAdmin = async (req, res) => {
+  try {
+    const { advisorId } = req.params;
+
+    const advisor = await prisma.user.findUnique({
+      where: { id: Number(advisorId) },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    if (!advisor || advisor.role !== "ADVISOR") {
+      return res.status(404).json({ message: "Advisor not found." });
+    }
+
+    const leads = await prisma.lead.findMany({
+      where: {
+        assignedToId: Number(advisorId),
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        altPhone: true,
+        age: true,
+        city: true,
+        status: true,
+        remarks: true,
+        nextFollowUpAt: true,
+        createdAt: true,
+        company: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+        activities: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+          select: {
+            id: true,
+            activityType: true,
+            note: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    const formattedLeads = leads.map((lead) => ({
+      ...lead,
+      lastActivity: lead.activities[0] || null,
+      activities: undefined,
+    }));
+
+    return res.status(200).json({
+      message: "Advisor leads fetched successfully.",
+      advisor,
+      leads: formattedLeads,
+    });
+  } catch (error) {
+    console.error("getAdvisorLeadsForAdmin error:", error);
+    return res.status(500).json({
+      message: "Server error.",
+    });
+  }
+};
+
 export const deleteTemplate = async (req, res) => {
   try {
     const { templateId } = req.params;

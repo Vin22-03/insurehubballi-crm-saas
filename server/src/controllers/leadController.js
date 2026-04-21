@@ -13,6 +13,7 @@ export const createLead = async (req, res) => {
       nextFollowUpAt,
       contactId,
       assignedToId,
+      templateId,
     } = req.body;
 
     if (!name || !phone) {
@@ -30,6 +31,11 @@ export const createLead = async (req, res) => {
       contactId !== undefined && contactId !== null && contactId !== ""
         ? Number(contactId)
         : null;
+
+    const numericTemplateId =
+    templateId !== undefined && templateId !== null && templateId !== ""
+      ? Number(templateId)
+      : null;
 
     let finalAssignedToId = req.user.id;
 
@@ -100,6 +106,7 @@ export const createLead = async (req, res) => {
         contactId: numericContactId,
         advisorId: finalAssignedToId,
         companyId: numericCompanyId,
+        templateId: numericTemplateId,
         activityType: "LEAD_CREATED",
         sourcePage: "DASHBOARD_PAGE",
         note: remarks || "Lead created",

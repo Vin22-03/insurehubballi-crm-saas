@@ -12,15 +12,15 @@ export const createContact = async (req, res) => {
       importSource,
     } = req.body;
 
-    if (!name || !phone) {
-      return res.status(400).json({
-        message: "Name and phone are required.",
-      });
-    }
+    if (!phone) {
+  return res.status(400).json({
+    message: "Phone is required.",
+  });
+}
 
     const contact = await prisma.contact.create({
       data: {
-        name,
+        name: name || "Unnamed contact",
         phone,
         altPhone: altPhone || null,
         age: age !== undefined && age !== null && age !== "" ? Number(age) : null,
@@ -53,51 +53,136 @@ export const createContact = async (req, res) => {
 
 export const getContacts = async (req, res) => {
   try {
-    const whereClause =
+    const { source, batchId, actionStatus } = req.query;
+
+    const baseWhere =
       req.user.role === "ADMIN"
-        ? {
-            isDeleted: false,
-          }
+        ? { isDeleted: false }
         : {
             createdById: req.user.id,
             isDeleted: false,
           };
 
     const contacts = await prisma.contact.findMany({
-      where: whereClause,
-      orderBy: {
-        createdAt: "desc",
+      where: {
+        ...baseWhere,
+        ...(source && source !== "ALL"
+          ? { importSource: source }
+          : {}),
+        ...(batchId ? { importBatchId: batchId } : {}),
       },
+      orderBy: { createdAt: "desc" },
       include: {
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            role: true,
-          },
-        },
         lead: {
           select: {
             id: true,
             status: true,
-            companyId: true,
-            assignedToId: true,
+          },
+        },
+        activities: {
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: {
+            activityType: true,
+            createdAt: true,
           },
         },
       },
     });
 
+    const formatted = contacts.map((c) => {
+      const hasWhatsApp = c.activities.some(
+        (a) => a.activityType === "WHATSAPP"
+      );
+
+      const hasCall = c.activities.some(
+        (a) => a.activityType === "CALL"
+      );
+
+      let actionStatusValue = "NONE";
+      if (hasWhatsApp && hasCall) actionStatusValue = "BOTH";
+      else if (hasWhatsApp) actionStatusValue = "WHATSAPP";
+      else if (hasCall) actionStatusValue = "CALL";
+
+      return {
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        altPhone: c.altPhone,
+        city: c.city,
+        importSource: c.importSource,
+        importBatchId: c.importBatchId,
+        createdAt: c.createdAt,
+
+        hasLead: !!c.lead,
+
+        actionStatus: actionStatusValue,
+
+        lastActivity: c.activities[0] || null,
+      };
+    });
+
     return res.status(200).json({
       message: "Contacts fetched successfully.",
-      contacts,
+      contacts: formatted,
     });
   } catch (error) {
     console.error("getContacts error:", error);
     return res.status(500).json({ message: "Server error." });
   }
 };
+export const bulkDeleteContacts = async (req, res) => {
+  try {
+    const { contactIds } = req.body;
 
+    if (!contactIds || contactIds.length === 0) {
+      return res.status(400).json({
+        message: "contactIds required",
+      });
+    }
+
+    await prisma.contact.updateMany({
+      where: {
+        id: { in: contactIds.map(Number) },
+        createdById: req.user.id,
+      },
+      data: {
+        isDeleted: true,
+      },
+    });
+
+    return res.json({ message: "Contacts deleted successfully" });
+  } catch (error) {
+    console.error("bulkDeleteContacts error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+export const getContactBatches = async (req, res) => {
+  try {
+    const batches = await prisma.contact.groupBy({
+      by: ["importBatchId"],
+      where: {
+        createdById: req.user.id,
+        isDeleted: false,
+        importBatchId: { not: null },
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    return res.json({
+      batches: batches.map((b) => ({
+        batchId: b.importBatchId,
+        count: b._count.id,
+      })),
+    });
+  } catch (error) {
+    console.error("getContactBatches error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 export const convertContactToLead = async (req, res) => {
   try {
     const { contactId } = req.params;

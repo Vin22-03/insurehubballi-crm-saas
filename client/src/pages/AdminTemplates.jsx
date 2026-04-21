@@ -6,8 +6,7 @@ const initialForm = {
   companyId: "",
   title: "",
   tagline: "",
-  minAge: "",
-  maxAge: "",
+  age: "",
   body: "",
   pdfUrl: "",
 };
@@ -87,15 +86,14 @@ function AdminTemplates() {
   const openEditPanel = (template) => {
     setMode("edit");
     setSelectedTemplate(template);
-    setForm({
-      companyId: String(template.company?.id || ""),
-      title: template.title || "",
-      tagline: template.tagline || "",
-      minAge: String(template.minAge ?? ""),
-      maxAge: String(template.maxAge ?? ""),
-      body: template.body || "",
-      pdfUrl: template.pdfUrl || "",
-    });
+   setForm({
+  companyId: String(template.company?.id || ""),
+  title: template.title || "",
+  tagline: template.tagline || "",
+  age: String(template.minAge ?? ""),
+  body: template.body || "",
+  pdfUrl: template.pdfUrl || "",
+});
     setErrorMsg("");
     setSuccessMsg("");
     setShowPanel(true);
@@ -125,15 +123,20 @@ function AdminTemplates() {
       setErrorMsg("");
       setSuccessMsg("");
 
-      const payload = {
-        companyId: Number(form.companyId),
-        title: form.title.trim(),
-        tagline: form.tagline.trim(),
-        minAge: Number(form.minAge),
-        maxAge: Number(form.maxAge),
-        body: form.body.trim(),
-        pdfUrl: form.pdfUrl.trim(),
-      };
+      const exactAge =
+  form.age !== undefined && form.age !== null && form.age !== ""
+    ? Number(form.age)
+    : null;
+
+const payload = {
+  companyId: Number(form.companyId),
+  title: form.title.trim(),
+  tagline: form.tagline.trim(),
+  minAge: exactAge,
+  maxAge: exactAge,
+  body: form.body.trim(),
+  pdfUrl: form.pdfUrl.trim(),
+};
 
       if (mode === "create") {
         await API.post("/admin/templates", payload);
@@ -241,7 +244,7 @@ function AdminTemplates() {
               <tr className="text-left text-sm text-slate-700">
                 <th className="px-5 py-4 font-semibold">Template</th>
                 <th className="px-5 py-4 font-semibold">Company</th>
-                <th className="px-5 py-4 font-semibold">Age Range</th>
+                <th className="px-5 py-4 font-semibold">Age</th>
                 <th className="px-5 py-4 font-semibold">PDF</th>
                 <th className="px-5 py-4 font-semibold">Status</th>
                 <th className="px-5 py-4 font-semibold">Actions</th>
@@ -281,7 +284,7 @@ function AdminTemplates() {
                     </td>
 
                     <td className="px-5 py-4 text-sm text-slate-700">
-                      {template.minAge} - {template.maxAge}
+                      {template.minAge ?? "—"}
                     </td>
 
                     <td className="px-5 py-4">
@@ -375,7 +378,7 @@ function AdminTemplates() {
               </div>
 
               <p className="mt-3 text-sm text-slate-600">
-                Age Range: {template.minAge} - {template.maxAge}
+                Age: {template.minAge ?? "—"}
               </p>
 
               <p className="mt-2 text-sm text-slate-500">
@@ -438,7 +441,7 @@ function AdminTemplates() {
                       </h2>
 
                       <p className="mt-2 text-sm text-slate-600">
-                        Configure company, age range, message content, and PDF link.
+                        Configure company, age, message content, and PDF link.
                       </p>
                     </div>
 
@@ -525,33 +528,20 @@ function AdminTemplates() {
                         />
                       </div>
 
-                      <div>
-                        <label className="mb-2 block text-sm font-semibold text-slate-700">
-                          Minimum Age
-                        </label>
-                        <input
-                          type="number"
-                          name="minAge"
-                          value={form.minAge}
-                          onChange={handleInputChange}
-                          placeholder="e.g. 18"
-                          className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-sm font-semibold text-slate-700">
-                          Maximum Age
-                        </label>
-                        <input
-                          type="number"
-                          name="maxAge"
-                          value={form.maxAge}
-                          onChange={handleInputChange}
-                          placeholder="e.g. 60"
-                          className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                        />
-                      </div>
+                      
+                     <div>
+  <label className="mb-2 block text-sm font-semibold text-slate-700">
+    Age
+  </label>
+  <input
+    type="number"
+    name="age"
+    value={form.age}
+    onChange={handleInputChange}
+    placeholder="e.g. 25"
+    className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+  />
+</div>
                     </div>
 
                     <div>

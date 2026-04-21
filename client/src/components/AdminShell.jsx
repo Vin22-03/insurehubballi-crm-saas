@@ -6,6 +6,11 @@ const navItems = [
   { key: "dashboard", label: "Dashboard", path: "/admin" },
   { key: "advisors", label: "Advisors", path: "/admin/advisors" },
   { key: "templates", label: "Templates", path: "/admin/templates" },
+  {
+    key: "advisor-performance",
+    label: "Advisor Performance",
+    path: "/admin/advisors/performance",
+  },
   { key: "passwords", label: "Password Requests", path: "/admin/password-requests" },
   { key: "leads", label: "All Leads", path: "/admin/leads" },
 ];
@@ -50,7 +55,7 @@ function AdminShell({ title, subtitle, activeTab = "dashboard", children }) {
                 </button>
               </div>
 
-              <div className="mt-5 hidden items-center gap-3 lg:flex">
+              <div className="mt-5 hidden flex-wrap items-center gap-3 lg:flex">
                 {navItems.map((item) => {
                   const isActive = activeTab === item.key;
 
