@@ -114,8 +114,10 @@ export const forgotPasswordRequest = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
-    }
+  return res.status(200).json({
+    message: "If the account exists, the password reset request has been submitted.",
+  });
+}
 
     const existingPendingRequest = await prisma.passwordResetRequest.findFirst({
       where: {
@@ -125,10 +127,10 @@ export const forgotPasswordRequest = async (req, res) => {
     });
 
     if (existingPendingRequest) {
-      return res.status(400).json({
-        message: "A password reset request is already pending for this user.",
-      });
-    }
+  return res.status(200).json({
+    message: "If the account exists, the password reset request has been submitted.",
+  });
+}
 
     const resetRequest = await prisma.passwordResetRequest.create({
       data: {

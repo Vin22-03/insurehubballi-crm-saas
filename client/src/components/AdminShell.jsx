@@ -14,7 +14,6 @@ const navItems = [
     path: "/admin/advisors/performance",
   },
   { key: "passwords", label: "Password Requests", path: "/admin/password-requests" },
-  { key: "leads", label: "All Leads", path: "/admin/leads" },
 ];
 
 function AdminShell({ title, subtitle, activeTab = "dashboard", children }) {
