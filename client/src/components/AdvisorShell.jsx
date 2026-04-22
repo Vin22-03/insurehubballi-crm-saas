@@ -2,14 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const navItems = [
+  const navItems = [
   { key: "dashboard", label: "Dashboard", path: "/advisor" },
   { key: "leads", label: "My Leads", path: "/advisor/leads" },
-  { key: "contacts", label: "Contacts", path: "/advisor/contacts" },
-  { key: "templates", label: "Templates", path: "/advisor/templates" },
   { key: "profile", label: "Profile", path: "/advisor/profile" },
+  { key: "contacts", label: "Contacts", path: "/advisor/contacts" },
+  { key: "resources", label: "Resources", path: "/advisor/resources" },
 ];
-
 function AdvisorShell({ title, subtitle, activeTab = "dashboard", children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
@@ -76,6 +75,7 @@ function AdvisorShell({ title, subtitle, activeTab = "dashboard", children }) {
                   <div className="hidden rounded-2xl border border-blue-100 bg-white/85 px-4 py-2 text-sm text-slate-600 xl:block">
                     {user?.name || "Advisor"}
                   </div>
+                 
 
                   <button
                     type="button"

@@ -49,10 +49,32 @@ enum ActivitySourcePage {
   DASHBOARD_PAGE
 }
 
+enum ResourceCategory {
+  PRODUCT
+  FAQ
+  TRAINING
+  SALES
+  CLAIMS
+  BENEFITS
+  COMPARISON
+  OTHER
+}
+
+enum ResourceFileType {
+  PDF
+  IMAGE
+  PPT
+  PPTX
+}
+
 model User {
   id                   Int                    @id @default(autoincrement())
   name                 String
   phone                String                 @unique
+  email                String?                @unique
+  photoUrl             String?
+  dob                  DateTime?
+  bio                  String?                @db.VarChar(500)
   password             String
   role                 Role
   isActive             Boolean                @default(true)
@@ -67,6 +89,7 @@ model User {
   leadActivities       LeadActivity[]         @relation("LeadActivityDoneBy")
   resetRequestsRaised  PasswordResetRequest[] @relation("UserResetRequests")
   resetRequestsHandled PasswordResetRequest[] @relation("AdminHandledRequests")
+  uploadedResources    Resource[]
 }
 
 model Company {
@@ -81,6 +104,7 @@ model Company {
   advisors    AdvisorCompany[]
   leads       Lead[]
   activities  LeadActivity[]
+  resources   Resource[]
 }
 
 model AdvisorCompany {
@@ -214,4 +238,27 @@ model PasswordResetRequest {
   @@index([userId])
   @@index([handledById])
   @@index([status])
+}
+
+model Resource {
+  id           Int              @id @default(autoincrement())
+  title        String
+  description  String?          @db.VarChar(500)
+  fileUrl      String
+  fileType     ResourceFileType
+  category     ResourceCategory
+  companyId    Int?
+  isActive     Boolean          @default(true)
+  uploadedById Int
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  company      Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  uploadedBy   User             @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([category])
+  @@index([fileType])
+  @@index([isActive])
+  @@index([uploadedById])
 }

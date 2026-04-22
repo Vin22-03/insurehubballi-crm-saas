@@ -132,9 +132,35 @@ export const getPasswordResetRequests = async (req, res) => {
       },
     });
 
+    const formattedRequests = requests.map((request) => ({
+      id: request.id,
+      phone: request.phone || request.user?.phone || "",
+      message: request.message || "",
+      status: request.status,
+      createdAt: request.createdAt,
+      completedAt: request.completedAt || null,
+      adminNote: request.adminNote || "",
+      user: request.user
+        ? {
+            id: request.user.id,
+            name: request.user.name,
+            phone: request.user.phone,
+            role: request.user.role,
+          }
+        : null,
+      handledBy: request.handledBy
+        ? {
+            id: request.handledBy.id,
+            name: request.handledBy.name,
+            phone: request.handledBy.phone,
+            role: request.handledBy.role,
+          }
+        : null,
+    }));
+
     return res.status(200).json({
       message: "Password reset requests fetched successfully.",
-      requests,
+      requests: formattedRequests,
     });
   } catch (error) {
     console.error("getPasswordResetRequests error:", error);

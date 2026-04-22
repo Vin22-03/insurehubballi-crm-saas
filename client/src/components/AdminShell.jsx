@@ -6,6 +6,8 @@ const navItems = [
   { key: "dashboard", label: "Dashboard", path: "/admin" },
   { key: "advisors", label: "Advisors", path: "/admin/advisors" },
   { key: "templates", label: "Templates", path: "/admin/templates" },
+  { key: "contacts", label: "Contacts", path: "/admin/contacts" },
+  { key: "resources", label: "Resources", path: "/admin/resources" },
   {
     key: "advisor-performance",
     label: "Advisor Performance",

@@ -509,23 +509,23 @@ export const getMyLeads = async (req, res) => {
         },
       },
       activities: {
-  orderBy: {
-    createdAt: "asc",
-  },
-  select: {
-    id: true,
-    activityType: true,
-    sourcePage: true,
-    note: true,
-    nextFollowUpAt: true,
-    createdAt: true,
-    template: {
-      select: {
-        id: true,
-        title: true,
-      },
-    },
-  },
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+          activityType: true,
+          sourcePage: true,
+          note: true,
+          nextFollowUpAt: true,
+          createdAt: true,
+          template: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
       },
     };
 
@@ -634,9 +634,33 @@ export const getMyLeads = async (req, res) => {
       ),
     ];
 
+    const mappedLeads = leads
+      .map(mapLeadRow)
+      .sort((a, b) => {
+        const aTime = new Date(a.latestActivity?.createdAt || a.createdAt).getTime();
+        const bTime = new Date(b.latestActivity?.createdAt || b.createdAt).getTime();
+        return bTime - aTime;
+      });
+
+    const mappedSelectedDateLeads = selectedDateLeadsRaw
+      .map(mapLeadRow)
+      .sort((a, b) => {
+        const aTime = new Date(a.latestActivity?.createdAt || a.createdAt).getTime();
+        const bTime = new Date(b.latestActivity?.createdAt || b.createdAt).getTime();
+        return bTime - aTime;
+      });
+
+    const mappedUpcomingReminders = upcomingRemindersRaw
+      .map(mapLeadRow)
+      .sort((a, b) => {
+        const aTime = new Date(a.nextFollowUp || a.createdAt).getTime();
+        const bTime = new Date(b.nextFollowUp || b.createdAt).getTime();
+        return aTime - bTime;
+      });
+
     return res.status(200).json({
       message: "Leads fetched successfully.",
-      leads: leads.map(mapLeadRow),
+      leads: mappedLeads,
       pagination: {
         page,
         limit,
@@ -649,8 +673,8 @@ export const getMyLeads = async (req, res) => {
         upcomingFollowUps,
         convertedLeads,
       },
-      selectedDateLeads: selectedDateLeadsRaw.map(mapLeadRow),
-      upcomingReminders: upcomingRemindersRaw.map(mapLeadRow),
+      selectedDateLeads: mappedSelectedDateLeads,
+      upcomingReminders: mappedUpcomingReminders,
       reminderDates,
     });
   } catch (error) {

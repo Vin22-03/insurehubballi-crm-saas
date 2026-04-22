@@ -53,11 +53,13 @@ export const createContact = async (req, res) => {
 
 export const getContacts = async (req, res) => {
   try {
-    const { source, batchId, actionStatus } = req.query;
+    const { search, advisorId, source, batchId, actionStatus } = req.query;
 
     const baseWhere =
       req.user.role === "ADMIN"
-        ? { isDeleted: false }
+        ? {
+            isDeleted: false,
+          }
         : {
             createdById: req.user.id,
             isDeleted: false,
@@ -66,17 +68,50 @@ export const getContacts = async (req, res) => {
     const contacts = await prisma.contact.findMany({
       where: {
         ...baseWhere,
+
+        ...(advisorId && req.user.role === "ADMIN"
+          ? { createdById: Number(advisorId) }
+          : {}),
+
         ...(source && source !== "ALL"
           ? { importSource: source }
           : {}),
-        ...(batchId ? { importBatchId: batchId } : {}),
+
+        ...(batchId && batchId !== "ALL"
+          ? { importBatchId: batchId }
+          : {}),
+
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search } },
+                { phone: { contains: search } },
+                { city: { contains: search } },
+                { importBatchId: { contains: search } },
+              ],
+            }
+          : {}),
       },
-      orderBy: { createdAt: "desc" },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
       include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            role: true,
+          },
+        },
         lead: {
           select: {
             id: true,
             status: true,
+            companyId: true,
+            assignedToId: true,
           },
         },
         activities: {
@@ -90,7 +125,7 @@ export const getContacts = async (req, res) => {
       },
     });
 
-    const formatted = contacts.map((c) => {
+    let formatted = contacts.map((c) => {
       const hasWhatsApp = c.activities.some(
         (a) => a.activityType === "WHATSAPP"
       );
@@ -109,18 +144,32 @@ export const getContacts = async (req, res) => {
         name: c.name,
         phone: c.phone,
         altPhone: c.altPhone,
+        age: c.age,
         city: c.city,
+        sourceNote: c.sourceNote,
         importSource: c.importSource,
         importBatchId: c.importBatchId,
         createdAt: c.createdAt,
 
         hasLead: !!c.lead,
-
         actionStatus: actionStatusValue,
-
         lastActivity: c.activities[0] || null,
+
+        advisor: c.createdBy
+          ? {
+              id: c.createdBy.id,
+              name: c.createdBy.name,
+              phone: c.createdBy.phone,
+            }
+          : null,
       };
     });
+
+    if (actionStatus && actionStatus !== "ALL") {
+      formatted = formatted.filter(
+        (contact) => contact.actionStatus === actionStatus
+      );
+    }
 
     return res.status(200).json({
       message: "Contacts fetched successfully.",
@@ -131,27 +180,165 @@ export const getContacts = async (req, res) => {
     return res.status(500).json({ message: "Server error." });
   }
 };
+export const updateContact = async (req, res) => {
+  try {
+    const { contactId } = req.params;
+    const { name, phone, altPhone, age, city, sourceNote } = req.body;
+
+    const contact = await prisma.contact.findUnique({
+      where: { id: Number(contactId) },
+    });
+
+    if (!contact || contact.isDeleted) {
+      return res.status(404).json({ message: "Contact not found." });
+    }
+
+    if (req.user.role !== "ADMIN" && contact.createdById !== req.user.id) {
+      return res.status(403).json({
+        message: "You are not allowed to update this contact.",
+      });
+    }
+    if (!phone) {
+  return res.status(400).json({
+    message: "Phone is required.",
+  });
+}
+
+    const updatedContact = await prisma.contact.update({
+      where: { id: Number(contactId) },
+      data: {
+        name: name || "Unnamed Contact",
+        phone,
+        altPhone: altPhone || null,
+        age: age !== undefined && age !== null && age !== "" ? Number(age) : null,
+        city: city || null,
+        sourceNote: sourceNote || null,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Contact updated successfully.",
+      contact: updatedContact,
+    });
+  } catch (error) {
+    console.error("updateContact error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+export const deleteContact = async (req, res) => {
+  try {
+    const { contactId } = req.params;
+
+    const contact = await prisma.contact.findUnique({
+      where: { id: Number(contactId) },
+    });
+
+    if (!contact || contact.isDeleted) {
+      return res.status(404).json({ message: "Contact not found." });
+    }
+
+    if (req.user.role !== "ADMIN" && contact.createdById !== req.user.id) {
+      return res.status(403).json({
+        message: "You are not allowed to delete this contact.",
+      });
+    }
+    
+
+    await prisma.contact.update({
+      where: { id: Number(contactId) },
+      data: {
+        isDeleted: true,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Contact deleted successfully.",
+    });
+  } catch (error) {
+    console.error("deleteContact error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+export const importContacts = async (req, res) => {
+  try {
+    const { contacts } = req.body;
+
+    if (!Array.isArray(contacts) || contacts.length === 0) {
+      return res.status(400).json({
+        message: "contacts array is required.",
+      });
+    }
+
+    const batchId = `BATCH-${Date.now()}`;
+    let importedCount = 0;
+    let skippedCount = 0;
+
+    for (const row of contacts) {
+      const phone = String(row.phone || "").replace(/\D/g, "").slice(-10);
+
+      if (!phone || phone.length !== 10) {
+        skippedCount++;
+        continue;
+      }
+
+      await prisma.contact.create({
+        data: {
+          name: row.name || "Unnamed Contact",
+          phone,
+          altPhone: row.altPhone
+            ? String(row.altPhone).replace(/\D/g, "").slice(-10)
+            : null,
+          city: row.city || null,
+          sourceNote: row.sourceNote || "Imported from Excel",
+          importSource: "EXCEL",
+          importBatchId: batchId,
+          createdById: req.user.id,
+        },
+      });
+
+      importedCount++;
+    }
+
+    return res.status(201).json({
+      message: "Contacts imported successfully.",
+      batchId,
+      totalRows: contacts.length,
+      importedCount,
+      skippedCount,
+    });
+  } catch (error) {
+    console.error("importContacts error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
 export const bulkDeleteContacts = async (req, res) => {
   try {
     const { contactIds } = req.body;
 
-    if (!contactIds || contactIds.length === 0) {
+    if (!Array.isArray(contactIds) || contactIds.length === 0) {
       return res.status(400).json({
-        message: "contactIds required",
+        message: "contactIds are required.",
       });
     }
 
+    const numericIds = contactIds.map(Number);
+
     await prisma.contact.updateMany({
       where: {
-        id: { in: contactIds.map(Number) },
-        createdById: req.user.id,
+        id: { in: numericIds },
+        ...(req.user.role === "ADMIN" ? {} : { createdById: req.user.id }),
+        isDeleted: false,
       },
       data: {
         isDeleted: true,
       },
     });
 
-    return res.json({ message: "Contacts deleted successfully" });
+    return res.status(200).json({
+      message: "Selected contacts deleted successfully.",
+    });
   } catch (error) {
     console.error("bulkDeleteContacts error:", error);
     return res.status(500).json({ message: "Server error." });
@@ -163,26 +350,33 @@ export const getContactBatches = async (req, res) => {
     const batches = await prisma.contact.groupBy({
       by: ["importBatchId"],
       where: {
-        createdById: req.user.id,
         isDeleted: false,
         importBatchId: { not: null },
+        ...(req.user.role === "ADMIN" ? {} : { createdById: req.user.id }),
       },
       _count: {
         id: true,
       },
+      _max: {
+        createdAt: true,
+      },
     });
 
-    return res.json({
-      batches: batches.map((b) => ({
-        batchId: b.importBatchId,
-        count: b._count.id,
+    return res.status(200).json({
+      message: "Contact batches fetched successfully.",
+      batches: batches.map((batch) => ({
+        batchId: batch.importBatchId,
+        count: batch._count.id,
+        latestCreatedAt: batch._max.createdAt,
       })),
     });
   } catch (error) {
     console.error("getContactBatches error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error." });
   }
 };
+
+
 export const convertContactToLead = async (req, res) => {
   try {
     const { contactId } = req.params;
