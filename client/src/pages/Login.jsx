@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  X,
 } from "lucide-react";
 import logo from "../assets/logo-ih.png";
 
@@ -54,9 +55,7 @@ function Login() {
       console.error("Login error:", error);
 
       const backendMessage =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Login failed";
+        error?.response?.data?.message || error?.message || "Login failed";
 
       setErrorMsg(backendMessage);
     } finally {
@@ -104,92 +103,45 @@ function Login() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#031b61] text-white">
-      {/* Main background gradients */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_left_top,_rgba(37,99,235,0.38),_transparent_28%),radial-gradient(circle_at_right_center,_rgba(6,182,212,0.15),_transparent_24%),linear-gradient(135deg,_#031b61_0%,_#08245f_28%,_#03113d_70%,_#020617_100%)]" />
+    <div className="relative h-[100dvh] overflow-hidden bg-[#031b61] text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_left_top,_rgba(37,99,235,0.34),_transparent_28%),radial-gradient(circle_at_right_center,_rgba(6,182,212,0.14),_transparent_25%),linear-gradient(135deg,_#031b61_0%,_#08245f_30%,_#03113d_72%,_#020617_100%)]" />
 
-      {/* Soft glowing orbs */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-16 -top-16 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute bottom-[-120px] right-[-80px] h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
-        <div className="absolute left-[44%] top-[22%] h-56 w-56 rounded-full bg-blue-400/10 blur-3xl" />
+        <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="absolute bottom-[-140px] right-[-100px] h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute left-[45%] top-[20%] h-56 w-56 rounded-full bg-blue-400/10 blur-3xl" />
       </div>
 
-      {/* Subtle line-wave effect */}
-      <div className="pointer-events-none absolute inset-0 opacity-20">
-        <svg
-          className="h-full w-full"
-          viewBox="0 0 1600 900"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M0 720C170 690 280 650 400 620C560 580 670 585 770 640C910 715 1000 700 1110 640C1240 570 1350 560 1600 640"
-            stroke="url(#paint0)"
-            strokeWidth="1.4"
-          />
-          <path
-            d="M0 760C180 725 320 700 430 675C575 640 690 642 790 690C925 755 1035 742 1140 690C1260 628 1370 620 1600 700"
-            stroke="url(#paint1)"
-            strokeWidth="1"
-          />
-          <defs>
-            <linearGradient id="paint0" x1="0" y1="600" x2="1600" y2="600">
-              <stop stopColor="transparent" />
-              <stop offset="0.5" stopColor="#3B82F6" />
-              <stop offset="1" stopColor="transparent" />
-            </linearGradient>
-            <linearGradient id="paint1" x1="0" y1="700" x2="1600" y2="700">
-              <stop stopColor="transparent" />
-              <stop offset="0.5" stopColor="#22D3EE" />
-              <stop offset="1" stopColor="transparent" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-
-
-      {/* Top badges */}
-      <div className="pointer-events-none absolute left-8 top-8 z-20 hidden lg:block">
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-medium text-blue-50 shadow-lg backdrop-blur-xl">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-          Insurance CRM Platform
-        </div>
-      </div>
-
-      <div className="pointer-events-none absolute right-8 top-8 z-20 hidden lg:flex items-center gap-2 text-sm text-white/75">
-        <ShieldCheck size={18} />
+      <div className="pointer-events-none absolute right-6 top-5 z-20 hidden items-center gap-2 text-xs text-white/72 lg:flex">
+        <ShieldCheck size={15} />
         <span>Powered by insurehubballi</span>
       </div>
 
-      {/* Layout */}
-      <div className="relative z-10 mx-auto grid min-h-screen max-w-[1600px] lg:grid-cols-[1fr_1fr]">
-        {/* Left side */}
-        <div className="hidden lg:flex items-center justify-center px-10 xl:px-16">
-          <div className="w-full max-w-[560px] pr-4">
-            <div className="mb-8">
-              <div className="inline-flex rounded-[2.7rem] border border-blue-200/30 bg-white/95 p-4 shadow-[0_0_55px_rgba(96,165,250,0.35)]">
-                <img
-                  src={logo}
-                  alt="insurehubballi"
-                  className="h-[220px] w-[220px] rounded-[2rem] object-contain"
-                />
-              </div>
+      <div className="relative z-10 mx-auto grid h-[100dvh] max-w-[1450px] grid-cols-1 lg:grid-cols-[0.9fr_1fr]">
+        {/* LEFT SIDE - DESKTOP ONLY */}
+        <div className="hidden items-center justify-center px-8 lg:flex xl:px-12">
+          <div className="w-full max-w-[470px]">
+            <div className="mb-5 inline-flex rounded-[2.1rem] border border-blue-200/25 bg-white/95 p-3 shadow-[0_0_40px_rgba(96,165,250,0.28)]">
+              <img
+                src={logo}
+                alt="insurehubballi"
+                className="h-[150px] w-[150px] rounded-[1.55rem] object-contain xl:h-[170px] xl:w-[170px]"
+              />
             </div>
 
-            <h1 className="text-[64px] font-extrabold leading-[1.03] tracking-[-0.04em] text-white">
+            <h1 className="text-[44px] font-extrabold leading-[1.04] tracking-[-0.04em] text-white xl:text-[52px]">
               Secure leads.
               <br />
               Build trust.
               <br />
-              <span className="bg-gradient-to-r from-blue-500 via-sky-400 to-cyan-300 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-cyan-300 bg-clip-text text-transparent">
                 Grow smarter.
-                <div className="mt-6 h-[3px] w-16 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"></div>
               </span>
             </h1>
 
-            <p className="mt-8 max-w-[500px] text-[17px] leading-9 text-blue-100/78">
+            <div className="mt-4 h-[3px] w-14 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500" />
+
+            <p className="mt-6 max-w-[430px] text-sm leading-7 text-blue-100/76 xl:text-[15px]">
               A premium CRM experience built for insurance advisors and admins.
               Manage clients, follow-ups, templates, and communication — all in
               one powerful platform.
@@ -197,91 +149,85 @@ function Login() {
           </div>
         </div>
 
-        {/* Right side */}
-        <div className="flex items-center justify-center px-5 py-8 sm:px-8 lg:justify-start lg:px-10 xl:px-14">
-          <div className="w-full max-w-[610px]">
-            {/* Mobile branding */}
-            <div className="mb-8 flex flex-col items-center text-center lg:hidden">
-              <div className="inline-flex rounded-[2rem] border border-blue-200/20 bg-white/95 p-3 shadow-[0_0_35px_rgba(96,165,250,0.28)]">
+        {/* RIGHT SIDE */}
+        <div className="flex h-[85dvh] items-center justify-center px-4 py-3 sm:px-8 lg:justify-start lg:px-8 xl:px-10">
+          <div className="flex h-full w-full max-w-[520px] flex-col items-center justify-center lg:block lg:h-auto">            
+            <div className="mb-4 flex flex-col items-center justify-center lg:hidden">
+              <div className="flex h-[100px] w-[100px] items-center justify-center rounded-[20px] border border-blue-200/20 bg-white/95 p-3 shadow-[0_0_32px_rgba(96,165,250,0.30)]">
                 <img
                   src={logo}
                   alt="insurehubballi"
-                  className="h-28 w-28 rounded-[1.4rem] object-contain"
+                  className="h-full w-full object-contain"
                 />
               </div>
 
-              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-blue-50 backdrop-blur-xl">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                Insurance CRM Platform
-              </div>
-
-              <h1 className="mt-6 text-4xl font-extrabold tracking-tight">
+              <h1 className="mt-3 text-[30px] font-black leading-none tracking-tight">
                 insurehubballi
               </h1>
-              <p className="mt-2 text-sm text-blue-100/70">
-                Login to your insurance CRM dashboard
+              <p className="mt-1 text-xs font-medium text-blue-100/70">
+                Your cover Our Care
               </p>
             </div>
 
-            {/* Login card */}
-            <div className="rounded-[2.2rem] border border-white/14 bg-[linear-gradient(180deg,rgba(18,41,112,0.94),rgba(12,31,88,0.92))] px-8 py-10 shadow-[0_20px_80px_rgba(0,0,0,0.38)] backdrop-blur-2xl sm:px-10 sm:py-11">
-              <div className="mb-8">
-                <div className="mb-5 inline-flex rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-2 text-base font-semibold text-white shadow-lg">
-                  Welcome back
-                </div>
+            {/* LOGIN CARD */}
+            <div className="rounded-[1.7rem] border border-white/14 bg-[linear-gradient(180deg,rgba(18,41,112,0.92),rgba(12,31,88,0.90))] px-5 py-4 shadow-[0_18px_65px_rgba(0,0,0,0.34)] backdrop-blur-2xl sm:px-7 sm:py-7 lg:px-8 lg:py-8">
+              <div className="mb-4 lg:mb-6">
+  <div className="mb-3 inline-flex rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-1.5 text-xs font-bold text-white shadow-lg sm:text-sm">
+    Welcome back
+  </div>
 
-                <h2 className="text-5xl font-extrabold tracking-tight text-white">
-                  Login
-                </h2>
+  <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-cyan-300 lg:hidden">
+    Secure leads · Build trust · Grow smarter
+  </p>
 
-                <p className="mt-4 text-[17px] leading-8 text-blue-100/75">
-                  Enter your mobile number and password to continue
-                </p>
+  <h2 className="text-[30px] font-black tracking-tight text-white sm:text-4xl lg:text-[42px]">
+    Login
+  </h2>
               </div>
+              
 
-              <div className="space-y-7">
-                {/* Mobile Number */}
+              <div className="space-y-3.5 sm:space-y-5">
                 <div>
-                  <label className="mb-3 block text-[18px] font-semibold text-white/95">
+                  <label className="mb-1.5 block text-sm font-bold text-white/95">
                     Mobile Number
                   </label>
 
-                  <div className="flex h-16 items-center rounded-2xl border border-white/12 bg-[#071b54]/90 px-5 shadow-inner">
-                    <Phone className="mr-4 text-white/45" size={22} />
+                  <div className="flex h-11 items-center rounded-2xl border border-white/12 bg-[#071b54]/90 px-4 shadow-inner sm:h-14">
+                    <Phone className="mr-3 text-white/42" size={18} />
                     <input
                       type="text"
                       placeholder="Enter mobile number"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="h-full w-full bg-transparent text-lg text-white outline-none placeholder:text-white/40"
+                      className="h-full w-full bg-transparent text-sm text-white outline-none placeholder:text-white/38 sm:text-base"
                     />
                   </div>
                 </div>
 
-                {/* Password */}
                 <div>
-                  <label className="mb-3 block text-[18px] font-semibold text-white/95">
+                  <label className="mb-1.5 block text-sm font-bold text-white/95">
                     Password
                   </label>
 
-                  <div className="flex h-16 items-center rounded-2xl border border-white/12 bg-[#071b54]/90 px-5 shadow-inner">
-                    <Lock className="mr-4 text-white/45" size={22} />
+                  <div className="flex h-11 items-center rounded-2xl border border-white/12 bg-[#071b54]/90 px-4 shadow-inner sm:h-14">
+                    <Lock className="mr-3 text-white/42" size={18} />
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="h-full w-full bg-transparent text-lg text-white outline-none placeholder:text-white/40"
+                      className="h-full w-full bg-transparent text-sm text-white outline-none placeholder:text-white/38 sm:text-base"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
                       className="ml-3 text-white/45 transition hover:text-white/70"
                     >
-                      {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                      {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                     </button>
                   </div>
                 </div>
+                
 
                 <div className="flex justify-end">
                   <button
@@ -292,14 +238,14 @@ function Login() {
                       setForgotSuccess("");
                       setForgotPhone(phone);
                     }}
-                    className="text-[16px] font-medium text-sky-400 transition hover:text-cyan-300"
+                    className="text-sm font-semibold text-sky-400 transition hover:text-cyan-300"
                   >
                     Forgot password?
                   </button>
                 </div>
 
                 {errorMsg ? (
-                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                  <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2 text-xs text-red-300 sm:text-sm">
                     {errorMsg}
                   </div>
                 ) : null}
@@ -307,31 +253,32 @@ function Login() {
                 <button
                   onClick={handleLogin}
                   disabled={loading}
-className="group flex h-[70px] w-full items-center justify-center rounded-xl 
-bg-gradient-to-r from-blue-600 to-cyan-500 
-text-lg font-semibold 
-shadow-lg transition-all duration-300
-hover:scale-[1.02] hover:shadow-[0_10px_40px_rgba(37,99,235,0.5)]"                >
+                  className="group flex h-11 w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-sm font-bold shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_10px_35px_rgba(37,99,235,0.45)] disabled:opacity-70 sm:h-14 sm:text-base"
+                >
                   <span>{loading ? "Logging in..." : "Login to Dashboard"}</span>
                   <ArrowRight
-                    className="ml-4 transition-transform duration-300 group-hover:translate-x-1"
-                    size={26}
+                    className="ml-3 transition-transform duration-300 group-hover:translate-x-1"
+                    size={21}
                   />
                 </button>
               </div>
+              <p className="mt-6 text-center text-xs leading-5 text-blue-100/60 lg:hidden">
+  Designed to simplify client management and boost your daily productivity.
+</p>
 
-              <div className="mt-10 border-t border-white/10 pt-8 text-center text-sm text-white/55">
+              <div className="mt-4 border-t border-white/10 pt-3 text-center text-[11px] text-white/52 sm:mt-6 sm:pt-5 sm:text-xs">
                 insurehubballi • Your cover Our Care
               </div>
             </div>
           </div>
         </div>
       </div>
+      
 
-      {/* Forgot Password Modal */}
+      {/* FORGOT PASSWORD MODAL */}
       {showForgotModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-950/95 p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-[1.7rem] border border-white/10 bg-slate-950/95 p-5 shadow-2xl sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-xl font-bold">Forgot Password</h3>
@@ -342,9 +289,9 @@ hover:scale-[1.02] hover:shadow-[0_10px_40px_rgba(37,99,235,0.5)]"              
 
               <button
                 onClick={() => setShowForgotModal(false)}
-                className="text-xl leading-none text-slate-300 hover:text-white"
+                className="rounded-full p-1 text-slate-300 transition hover:bg-white/10 hover:text-white"
               >
-                ×
+                <X size={20} />
               </button>
             </div>
 

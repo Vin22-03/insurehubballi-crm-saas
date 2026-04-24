@@ -109,9 +109,7 @@ function AdvisorDashboard() {
     setForm((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "companyId" || name === "age"
-        ? { templateId: "" }
-        : {}),
+      ...(name === "companyId" || name === "age" ? { templateId: "" } : {}),
     }));
 
     if (name === "companyId" || name === "age") {
@@ -146,7 +144,13 @@ function AdvisorDashboard() {
   };
 
   const generateMessage = () => {
-    if (!form.companyId || !form.clientName || !form.clientMobile || !form.age || !form.templateId) {
+    if (
+      !form.companyId ||
+      !form.clientName ||
+      !form.clientMobile ||
+      !form.age ||
+      !form.templateId
+    ) {
       setErrorMsg("Please select company, fill client details, age, and template.");
       return;
     }
@@ -256,78 +260,40 @@ function AdvisorDashboard() {
   };
 
   return (
-    <AdvisorShell
-      title="Advisor Dashboard"
-      subtitle="Select company, client details, age, and suitable template. Generate the message, open WhatsApp, and continue the follow-up flow."
-      activeTab="dashboard"
-    >
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-[24px] border border-blue-100 bg-[linear-gradient(180deg,#ffffff,#f3f8ff)] p-4 shadow-[0_10px_25px_rgba(37,99,235,0.06)]">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-            Allowed Companies
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
-            {allowedCompanies.length
-              ? allowedCompanies.map((c) => c.name).join(", ")
-              : "No mapped companies found."}
-          </p>
-        </div>
-
-        <div className="rounded-[24px] border border-blue-100 bg-[linear-gradient(180deg,#ffffff,#f3f8ff)] p-4 shadow-[0_10px_25px_rgba(37,99,235,0.06)]">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-            Template Logic
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
-            Select company + age first to unlock the right template options.
-          </p>
-        </div>
-
-        <div className="rounded-[24px] border border-blue-100 bg-[linear-gradient(180deg,#ffffff,#f3f8ff)] p-4 shadow-[0_10px_25px_rgba(37,99,235,0.06)]">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-            Message Flow
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
-            Generate → WhatsApp → Confirm Sent → Save Lead.
-          </p>
-        </div>
-      </div>
-
+    <AdvisorShell title="Advisor Dashboard" activeTab="dashboard">
       {errorMsg ? (
-        <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 sm:text-sm">
           {errorMsg}
         </div>
       ) : null}
 
       {successMsg ? (
-        <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 sm:text-sm">
           {successMsg}
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <section className="rounded-[30px] border border-blue-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(244,249,255,0.96))] p-5 shadow-[0_18px_45px_rgba(37,99,235,0.07)] sm:p-6">
-          <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
-              Setup Workspace
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_0.9fr]">
+        <section className="rounded-[24px] border border-blue-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(244,249,255,0.98))] p-4 shadow-[0_12px_32px_rgba(37,99,235,0.06)] sm:p-5">
+          <div className="mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-700">
+              Message Setup
             </p>
-            <h2 className="mt-2 text-xl font-bold text-slate-900">
-              Client & Template Setup
+            <h2 className="mt-1 text-lg font-bold text-slate-900 sm:text-xl">
+              Client & Template
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Fill client details, choose company and age, then select the most suitable template.
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Select Company
+              <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                Company
               </label>
               <select
                 name="companyId"
                 value={form.companyId}
                 onChange={handleInputChange}
-                className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-xl border border-blue-100 bg-[#f8fbff] px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Select Company</option>
                 {allowedCompanies.map((company) => (
@@ -339,7 +305,7 @@ function AdvisorDashboard() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label className="mb-1.5 block text-xs font-bold text-slate-700">
                 Client Name
               </label>
               <input
@@ -348,12 +314,12 @@ function AdvisorDashboard() {
                 value={form.clientName}
                 onChange={handleInputChange}
                 placeholder="Enter client name"
-                className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-xl border border-blue-100 bg-[#f8fbff] px-3 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label className="mb-1.5 block text-xs font-bold text-slate-700">
                 Client Mobile
               </label>
               <input
@@ -361,20 +327,20 @@ function AdvisorDashboard() {
                 name="clientMobile"
                 value={form.clientMobile}
                 onChange={handleInputChange}
-                placeholder="Enter client mobile number"
-                className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                placeholder="Enter mobile number"
+                className="w-full rounded-xl border border-blue-100 bg-[#f8fbff] px-3 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Select Age
+              <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                Age
               </label>
               <select
                 name="age"
                 value={form.age}
                 onChange={handleInputChange}
-                className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-xl border border-blue-100 bg-[#f8fbff] px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Select Age</option>
                 {AGE_OPTIONS.map((age) => (
@@ -386,20 +352,18 @@ function AdvisorDashboard() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Select Template
+              <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                Template
               </label>
               <select
                 name="templateId"
                 value={form.templateId}
                 onChange={handleTemplateSelection}
                 disabled={!form.companyId || !form.age || loadingTemplates}
-                className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-xl border border-blue-100 bg-[#f8fbff] px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <option value="">
-                  {loadingTemplates
-                    ? "Loading templates..."
-                    : "Select Template"}
+                  {loadingTemplates ? "Loading templates..." : "Select Template"}
                 </option>
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
@@ -410,106 +374,90 @@ function AdvisorDashboard() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3">
-            <div className="rounded-2xl border border-blue-100 bg-blue-50/75 px-4 py-4 text-sm text-slate-700">
-              <span className="font-semibold text-slate-900">
-                Template Selection Logic
-              </span>
-              <br />
-              First select <span className="font-semibold">Company + Age</span>,
-              then choose the most suitable template from the dropdown.
-            </div>
+          <div className="mt-4 grid grid-cols-1 gap-2">
+  <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-3 text-xs text-slate-700">
+    <span className="font-bold text-slate-900">Template Selection Logic</span>
+    <br />
+    First select <span className="font-bold">Company + Age</span>, then choose
+    the most suitable template from the dropdown.
+  </div>
 
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-4 text-sm text-amber-900">
-              <span className="font-semibold">Important</span>
-              <br />
-              Please use only your own mobile or your own WhatsApp Web account before sending client messages.
-            </div>
-          </div>
+  <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-3 text-xs text-amber-900">
+    <span className="font-bold">Important</span>
+    <br />
+    Please use only your own mobile or your own WhatsApp Web account before sending client messages.
+  </div>
+</div>
 
-          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <button
               onClick={generateMessage}
-              className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(37,99,235,0.24)] transition hover:bg-blue-700"
+              className="rounded-xl bg-blue-600 px-3 py-2.5 text-[11px] font-bold text-white shadow-[0_10px_20px_rgba(37,99,235,0.22)] transition hover:bg-blue-700 sm:text-xs"
             >
-              Generate Message
+              Generate
             </button>
 
             <button
               onClick={openWhatsApp}
-              className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(5,150,105,0.20)] transition hover:bg-emerald-700"
+              className="rounded-xl bg-emerald-600 px-3 py-2.5 text-[11px] font-bold text-white shadow-[0_10px_20px_rgba(5,150,105,0.18)] transition hover:bg-emerald-700 sm:text-xs"
             >
-              Open WhatsApp
+              WhatsApp
             </button>
 
             <button
               onClick={confirmSentAndSaveLead}
-              className="rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(2,132,199,0.20)] transition hover:bg-sky-700"
+              className="rounded-xl bg-sky-600 px-3 py-2.5 text-[11px] font-bold text-white shadow-[0_10px_20px_rgba(2,132,199,0.18)] transition hover:bg-sky-700 sm:text-xs"
             >
-              Confirm Sent & Save Lead
+              Save Lead
             </button>
 
             <button
               onClick={openPdfLink}
-              className="rounded-2xl border border-blue-200 bg-white/85 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-blue-50"
+              className="rounded-xl border border-blue-200 bg-white/90 px-3 py-2.5 text-[11px] font-bold text-slate-700 transition hover:bg-blue-50 sm:text-xs"
             >
-              Open PDF
+              PDF
             </button>
           </div>
         </section>
 
-        <section className="rounded-[30px] border border-blue-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(244,249,255,0.96))] p-5 shadow-[0_18px_45px_rgba(37,99,235,0.07)] sm:p-6">
-          <div className="mb-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
-              Live Preview
-            </p>
-            <h2 className="mt-2 text-xl font-bold text-slate-900">
-              Message Workspace
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Review selected template details and the final generated message before opening WhatsApp.
+        <section className="rounded-[24px] border border-blue-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(244,249,255,0.98))] p-4 shadow-[0_12px_32px_rgba(37,99,235,0.06)] sm:p-5">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-700">
+                Preview
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-slate-900 sm:text-xl">
+                Message
+              </h2>
+            </div>
+
+            <p className="text-xs font-semibold text-blue-700">
+              {selectedTemplate?.title || "No template selected"}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-[#f4f9ff] px-4 py-4 text-sm text-slate-700">
-            <span className="font-semibold text-slate-900">
-              Selected Template
-            </span>
-            <br />
-            <span>{selectedTemplate?.title || "No template selected"}</span>
-            <br />
-            <span className="text-slate-500">
-              {selectedTemplate?.tagline || "Tagline will appear here"}
-            </span>
-          </div>
-
-          <div className="mt-4 rounded-[28px] border border-blue-200 bg-white/75 p-3 shadow-inner">
+          <div className="rounded-[20px] border border-blue-200 bg-white/75 p-2 shadow-inner">
             <textarea
               value={generatedMessage}
               onChange={(e) => setGeneratedMessage(e.target.value)}
               placeholder="Generated message will appear here"
-              className="min-h-[360px] w-full resize-none rounded-[22px] border border-blue-100 bg-[#f8fbff] px-4 py-4 text-sm leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              className="min-h-[220px] w-full resize-none rounded-2xl border border-blue-100 bg-[#f8fbff] px-3 py-3 text-sm leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 sm:min-h-[300px]"
             />
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               onClick={copyMessage}
-              className="rounded-2xl border border-blue-200 bg-white/85 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-blue-50"
+              className="rounded-xl border border-blue-200 bg-white/90 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-blue-50"
             >
-              Copy Message
+              Copy
             </button>
             <button
               onClick={clearForm}
-              className="rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
             >
-              Clear Form
+              Clear
             </button>
-          </div>
-
-          <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/65 px-4 py-4 text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">Preview Tip:</span>{" "}
-            Always verify the client name, age, and company before sharing the final message.
           </div>
         </section>
       </div>
