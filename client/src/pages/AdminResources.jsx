@@ -392,7 +392,7 @@ function AdminResources() {
 
                     <td className="px-5 py-4">
                       <a
-                        href={`http://localhost:5000${resource.fileUrl}`}
+                        href={`${window.location.origin}${resource.fileUrl}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-sm font-semibold text-blue-700 hover:underline"
@@ -497,7 +497,7 @@ function AdminResources() {
 
               <div className="mt-4 flex items-center justify-between gap-3">
                 <a
-                  href={`http://localhost:5000${resource.fileUrl}`}
+                  href={`${window.location.origin}${resource.fileUrl}`}
                   target="_blank"
                   rel="noreferrer"
                   className="text-sm font-semibold text-blue-700 hover:underline"

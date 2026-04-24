@@ -70,7 +70,7 @@ function Login() {
       setForgotSuccess("");
 
       const res = await fetch(
-        "http://localhost:5000/auth/forgot-password-request",
+        "/auth/forgot-password-request",
         {
           method: "POST",
           headers: {
@@ -103,7 +103,7 @@ function Login() {
   };
 
   return (
-    <div className="relative h-[100dvh] overflow-hidden bg-[#031b61] text-white">
+    <div className="relative h-[100svh] overflow-hidden bg-[#031b61] text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_left_top,_rgba(37,99,235,0.34),_transparent_28%),radial-gradient(circle_at_right_center,_rgba(6,182,212,0.14),_transparent_25%),linear-gradient(135deg,_#031b61_0%,_#08245f_30%,_#03113d_72%,_#020617_100%)]" />
 
       <div className="pointer-events-none absolute inset-0">
@@ -117,8 +117,7 @@ function Login() {
         <span>Powered by insurehubballi</span>
       </div>
 
-      <div className="relative z-10 mx-auto grid h-[100dvh] max-w-[1450px] grid-cols-1 lg:grid-cols-[0.9fr_1fr]">
-        {/* LEFT SIDE - DESKTOP ONLY */}
+      <div className="relative z-10 mx-auto grid h-[100svh] max-w-[1450px] grid-cols-1 lg:grid-cols-[0.9fr_1fr]">
         <div className="hidden items-center justify-center px-8 lg:flex xl:px-12">
           <div className="w-full max-w-[470px]">
             <div className="mb-5 inline-flex rounded-[2.1rem] border border-blue-200/25 bg-white/95 p-3 shadow-[0_0_40px_rgba(96,165,250,0.28)]">
@@ -149,11 +148,10 @@ function Login() {
           </div>
         </div>
 
-        {/* RIGHT SIDE */}
-        <div className="flex h-[85dvh] items-center justify-center px-4 py-3 sm:px-8 lg:justify-start lg:px-8 xl:px-10">
-          <div className="flex h-full w-full max-w-[520px] flex-col items-center justify-center lg:block lg:h-auto">            
-            <div className="mb-4 flex flex-col items-center justify-center lg:hidden">
-              <div className="flex h-[100px] w-[100px] items-center justify-center rounded-[20px] border border-blue-200/20 bg-white/95 p-3 shadow-[0_0_32px_rgba(96,165,250,0.30)]">
+        <div className="flex h-[100svh] items-center justify-center px-4 py-3 sm:px-8 lg:justify-start lg:px-8 xl:px-10">
+          <div className="flex h-full w-full max-w-[520px] flex-col justify-center lg:block lg:h-auto">
+            <div className="mb-3 flex flex-col items-center justify-center lg:hidden">
+              <div className="flex h-[86px] w-[86px] items-center justify-center rounded-[22px] border border-blue-200/20 bg-white/95 p-3 shadow-[0_0_30px_rgba(96,165,250,0.30)]">
                 <img
                   src={logo}
                   alt="insurehubballi"
@@ -161,7 +159,7 @@ function Login() {
                 />
               </div>
 
-              <h1 className="mt-3 text-[30px] font-black leading-none tracking-tight">
+              <h1 className="mt-2.5 text-[27px] font-black leading-none tracking-tight">
                 insurehubballi
               </h1>
               <p className="mt-1 text-xs font-medium text-blue-100/70">
@@ -169,26 +167,28 @@ function Login() {
               </p>
             </div>
 
-            {/* LOGIN CARD */}
-            <div className="rounded-[1.7rem] border border-white/14 bg-[linear-gradient(180deg,rgba(18,41,112,0.92),rgba(12,31,88,0.90))] px-5 py-4 shadow-[0_18px_65px_rgba(0,0,0,0.34)] backdrop-blur-2xl sm:px-7 sm:py-7 lg:px-8 lg:py-8">
-              <div className="mb-4 lg:mb-6">
-  <div className="mb-3 inline-flex rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-1.5 text-xs font-bold text-white shadow-lg sm:text-sm">
-    Welcome back
-  </div>
+            <div className="rounded-[1.55rem] border border-white/14 bg-[linear-gradient(180deg,rgba(18,41,112,0.92),rgba(12,31,88,0.90))] px-5 py-4 shadow-[0_18px_65px_rgba(0,0,0,0.34)] backdrop-blur-2xl sm:px-7 sm:py-7 lg:px-8 lg:py-8">
+              <div className="mb-3.5 lg:mb-6">
+                <div className="mb-2.5 inline-flex rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-1.5 text-xs font-bold text-white shadow-lg sm:text-sm">
+                  Welcome back
+                </div>
 
-  <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-cyan-300 lg:hidden">
-    Secure leads · Build trust · Grow smarter
-  </p>
+                <p className="mb-2.5 text-[11px] font-black uppercase tracking-[0.18em] text-cyan-300 lg:hidden">
+                  Secure leads · Build trust · Grow smarter
+                </p>
 
-  <h2 className="text-[30px] font-black tracking-tight text-white sm:text-4xl lg:text-[42px]">
-    Login
-  </h2>
+                <h2 className="text-[30px] font-black tracking-tight text-white sm:text-4xl lg:text-[42px]">
+                  Login
+                </h2>
+
+                <p className="mt-1.5 text-[13px] leading-5 text-blue-100/72 sm:text-[15px] sm:leading-6">
+                  Enter your mobile number and password to continue
+                </p>
               </div>
-              
 
-              <div className="space-y-3.5 sm:space-y-5">
+              <div className="space-y-3 sm:space-y-5">
                 <div>
-                  <label className="mb-1.5 block text-sm font-bold text-white/95">
+                  <label className="mb-1.5 block text-[13px] font-bold text-white/95 sm:text-sm">
                     Mobile Number
                   </label>
 
@@ -205,7 +205,7 @@ function Login() {
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-bold text-white/95">
+                  <label className="mb-1.5 block text-[13px] font-bold text-white/95 sm:text-sm">
                     Password
                   </label>
 
@@ -227,7 +227,6 @@ function Login() {
                     </button>
                   </div>
                 </div>
-                
 
                 <div className="flex justify-end">
                   <button
@@ -262,20 +261,19 @@ function Login() {
                   />
                 </button>
               </div>
-              <p className="mt-6 text-center text-xs leading-5 text-blue-100/60 lg:hidden">
-  Designed to simplify client management and boost your daily productivity.
-</p>
 
-              <div className="mt-4 border-t border-white/10 pt-3 text-center text-[11px] text-white/52 sm:mt-6 sm:pt-5 sm:text-xs">
+              <div className="mt-3.5 border-t border-white/10 pt-3 text-center text-[11px] text-white/52 sm:mt-6 sm:pt-5 sm:text-xs">
                 insurehubballi • Your cover Our Care
               </div>
             </div>
+
+            <p className="mt-3 hidden text-center text-[11px] font-medium leading-4 text-blue-100/60 lg:hidden min-[390px]:block">
+              Smart CRM for advisors — simple, fast, and built for daily follow-ups.
+            </p>
           </div>
         </div>
       </div>
-      
 
-      {/* FORGOT PASSWORD MODAL */}
       {showForgotModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[1.7rem] border border-white/10 bg-slate-950/95 p-5 shadow-2xl sm:p-6">
