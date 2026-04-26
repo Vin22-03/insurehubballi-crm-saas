@@ -148,6 +148,7 @@ model Contact {
   age            Int?
   city           String?
   sourceNote     String?
+  tags           Json?
   importSource   ContactSourceType @default(MANUAL)
   importBatchId  String?
   isDeleted      Boolean           @default(false)

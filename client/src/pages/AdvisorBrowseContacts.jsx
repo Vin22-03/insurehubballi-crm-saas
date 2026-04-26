@@ -97,6 +97,7 @@ function AdvisorBrowseContacts() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedContact, setSelectedContact] = useState(null);
   const [editingContact, setEditingContact] = useState(null);
+  const [tagFilter, setTagFilter] = useState("ALL");
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -105,6 +106,7 @@ function AdvisorBrowseContacts() {
     age: "",
     city: "",
     sourceNote: "",
+    tags: "",
   });
 
   const [page, setPage] = useState(1);
@@ -119,6 +121,7 @@ function AdvisorBrowseContacts() {
       if (sourceFilter !== "ALL") params.source = sourceFilter;
       if (actionFilter !== "ALL") params.actionStatus = actionFilter;
       if (batchFilter !== "ALL") params.batchId = batchFilter;
+      if (tagFilter !== "ALL") params.tag = tagFilter;
 
       const [contactsRes, batchesRes] = await Promise.all([
         API.get("/contacts", { params }),
@@ -139,7 +142,7 @@ function AdvisorBrowseContacts() {
 
   useEffect(() => {
     fetchContacts();
-  }, [sourceFilter, actionFilter, batchFilter]);
+  }, [sourceFilter, actionFilter, batchFilter, tagFilter]);
 
   useEffect(() => {
     setPage(1);
@@ -265,6 +268,7 @@ function AdvisorBrowseContacts() {
       age: contact.age ?? "",
       city: contact.city || "",
       sourceNote: contact.sourceNote || "",
+      tags: Array.isArray(contact.tags) ? contact.tags.join(", ") : "",
     });
   };
 
@@ -282,6 +286,10 @@ function AdvisorBrowseContacts() {
         age: editForm.age === "" ? null : Number(editForm.age),
         city: editForm.city,
         sourceNote: editForm.sourceNote,
+        tags: editForm.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
       });
 
       setSuccessMsg("Contact updated successfully.");
@@ -294,6 +302,15 @@ function AdvisorBrowseContacts() {
       );
     }
   };
+  const availableTags = useMemo(() => {
+  return [
+    ...new Set(
+      contacts.flatMap((contact) =>
+        Array.isArray(contact.tags) ? contact.tags : []
+      )
+    ),
+  ].sort();
+}, [contacts]);
 
   const handleDeleteSingle = async (contactId) => {
     const confirmed = window.confirm("Delete this contact?");
@@ -453,7 +470,7 @@ function AdvisorBrowseContacts() {
       ) : null}
 
       {/* FILTERS */}
-      <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-[1fr_180px_180px_180px_180px_180px]">
+      <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-[1fr_160px_160px_160px_160px_160px_160px]">
         <div className="rounded-[24px] border border-blue-100 bg-white/80 p-4 shadow-[0_12px_30px_rgba(37,99,235,0.05)]">
           <input
             type="text"
@@ -533,7 +550,22 @@ function AdvisorBrowseContacts() {
             <option value="both-first">Both Done First</option>
           </select>
         </div>
+           <div className="rounded-[24px] border border-blue-100 bg-white/80 p-4 shadow-[0_12px_30px_rgba(37,99,235,0.05)]">
+  <select
+    value={tagFilter}
+    onChange={(e) => setTagFilter(e.target.value)}
+    className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+  >
+    <option value="ALL">All Tags</option>
+    {availableTags.map((tag) => (
+      <option key={tag} value={tag}>
+        {tag}
+      </option>
+    ))}
+  </select>
+</div>
       </div>
+   
 
       {/* BULK ACTION BAR */}
       <div className="mb-6 flex flex-col gap-3 rounded-[24px] border border-blue-100 bg-white/80 px-4 py-4 shadow-[0_10px_25px_rgba(37,99,235,0.04)] sm:flex-row sm:items-center sm:justify-between">
@@ -570,6 +602,7 @@ function AdvisorBrowseContacts() {
                 </th>
                 <th className="px-5 py-4 font-semibold">Contact</th>
                 <th className="px-5 py-4 font-semibold">City</th>
+                <th className="px-5 py-4 font-semibold">Tags</th>
                 <th className="px-5 py-4 font-semibold">Source</th>
                 <th className="px-5 py-4 font-semibold">Batch</th>
                 <th className="px-5 py-4 font-semibold">Action Status</th>
@@ -582,13 +615,13 @@ function AdvisorBrowseContacts() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="px-5 py-8 text-sm text-slate-600">
+                  <td colSpan="10" className="px-5 py-8 text-sm text-slate-600">
                     Loading contacts...
                   </td>
                 </tr>
               ) : paginatedContacts.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-5 py-8 text-sm text-slate-600">
+                  <td colSpan="10" className="px-5 py-8 text-sm text-slate-600">
                     No contacts found.
                   </td>
                 </tr>
@@ -625,6 +658,22 @@ function AdvisorBrowseContacts() {
                     <td className="px-5 py-4 text-sm text-slate-700">
                       {contact.city || "—"}
                     </td>
+                    <td className="px-5 py-4">
+  <div className="flex flex-wrap gap-1.5">
+    {Array.isArray(contact.tags) && contact.tags.length > 0 ? (
+      contact.tags.map((tag) => (
+        <span
+          key={tag}
+          className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700"
+        >
+          {tag}
+        </span>
+      ))
+    ) : (
+      <span className="text-sm text-slate-500">—</span>
+    )}
+  </div>
+</td>
 
                     <td className="px-5 py-4">
                       <span
@@ -1037,6 +1086,15 @@ function AdvisorBrowseContacts() {
                   placeholder="Name"
                   className="rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none"
                 />
+                <input
+  type="text"
+  value={editForm.tags}
+  onChange={(e) =>
+    setEditForm((prev) => ({ ...prev, tags: e.target.value }))
+  }
+  placeholder="Tags: Health, Life, Hot"
+  className="rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none"
+/>
                 <input
                   type="text"
                   value={editForm.phone}

@@ -9,11 +9,18 @@ function AdvisorCreateContact() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+  const [tags, setTags] = useState("");
   const [notes, setNotes] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  const normalizeTags = (value) =>
+    value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
 
   const handlePhoneChange = (e) => {
     const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
@@ -44,6 +51,7 @@ function AdvisorCreateContact() {
         phone: phone.trim(),
         city: city.trim(),
         sourceNote: notes.trim(),
+        tags: normalizeTags(tags),
       });
 
       setSuccessMsg("Contact created successfully ✅");
@@ -51,6 +59,7 @@ function AdvisorCreateContact() {
       setName("");
       setPhone("");
       setCity("");
+      setTags("");
       setNotes("");
 
       setTimeout(() => {
@@ -153,6 +162,23 @@ function AdvisorCreateContact() {
               maxLength={60}
               className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
             />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Tags
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Health, Life, Hot"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              maxLength={150}
+              className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              Separate multiple tags with comma. Example: Health, Life
+            </p>
           </div>
 
           <div>

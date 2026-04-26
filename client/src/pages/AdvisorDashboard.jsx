@@ -160,7 +160,21 @@ function AdvisorDashboard() {
       return;
     }
 
-    const finalMessage = replaceTemplateVariables(selectedTemplate.body);
+const bodyWithVariables = replaceTemplateVariables(selectedTemplate.body);
+
+const finalMessage = `Dear *${form.clientName || "Client"}*,
+
+Based on your age *${form.age}*, we are sharing a suitable plan for you:
+
+${bodyWithVariables}
+
+For more details, please contact:
+*${user?.name || "Advisor"}*
+*${user?.phone || ""}*
+
+Team - insurehubballi  
+Your Cover, Our Care`;
+
     setGeneratedMessage(finalMessage);
     setSuccessMsg("Message generated successfully.");
     setErrorMsg("");

@@ -1,5 +1,20 @@
 import prisma from "../config/prisma.js";
 
+const normalizeTags = (tags) => {
+  if (Array.isArray(tags)) {
+    return tags.map((tag) => String(tag).trim()).filter(Boolean);
+  }
+
+  if (typeof tags === "string" && tags.trim()) {
+    return tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
 export const createContact = async (req, res) => {
   try {
     const {
@@ -10,13 +25,12 @@ export const createContact = async (req, res) => {
       city,
       sourceNote,
       importSource,
+      tags,
     } = req.body;
 
     if (!phone) {
-  return res.status(400).json({
-    message: "Phone is required.",
-  });
-}
+      return res.status(400).json({ message: "Phone is required." });
+    }
 
     const contact = await prisma.contact.create({
       data: {
@@ -26,6 +40,7 @@ export const createContact = async (req, res) => {
         age: age !== undefined && age !== null && age !== "" ? Number(age) : null,
         city: city || null,
         sourceNote: sourceNote || null,
+        tags: normalizeTags(tags),
         importSource: importSource || "MANUAL",
         createdById: req.user.id,
       },
@@ -53,17 +68,12 @@ export const createContact = async (req, res) => {
 
 export const getContacts = async (req, res) => {
   try {
-    const { search, advisorId, source, batchId, actionStatus } = req.query;
+    const { search, advisorId, source, batchId, actionStatus, tag } = req.query;
 
     const baseWhere =
       req.user.role === "ADMIN"
-        ? {
-            isDeleted: false,
-          }
-        : {
-            createdById: req.user.id,
-            isDeleted: false,
-          };
+        ? { isDeleted: false }
+        : { createdById: req.user.id, isDeleted: false };
 
     const contacts = await prisma.contact.findMany({
       where: {
@@ -73,13 +83,9 @@ export const getContacts = async (req, res) => {
           ? { createdById: Number(advisorId) }
           : {}),
 
-        ...(source && source !== "ALL"
-          ? { importSource: source }
-          : {}),
+        ...(source && source !== "ALL" ? { importSource: source } : {}),
 
-        ...(batchId && batchId !== "ALL"
-          ? { importBatchId: batchId }
-          : {}),
+        ...(batchId && batchId !== "ALL" ? { importBatchId: batchId } : {}),
 
         ...(search
           ? {
@@ -130,9 +136,7 @@ export const getContacts = async (req, res) => {
         (a) => a.activityType === "WHATSAPP"
       );
 
-      const hasCall = c.activities.some(
-        (a) => a.activityType === "CALL"
-      );
+      const hasCall = c.activities.some((a) => a.activityType === "CALL");
 
       let actionStatusValue = "NONE";
       if (hasWhatsApp && hasCall) actionStatusValue = "BOTH";
@@ -147,6 +151,7 @@ export const getContacts = async (req, res) => {
         age: c.age,
         city: c.city,
         sourceNote: c.sourceNote,
+        tags: Array.isArray(c.tags) ? c.tags : [],
         importSource: c.importSource,
         importBatchId: c.importBatchId,
         createdAt: c.createdAt,
@@ -171,6 +176,12 @@ export const getContacts = async (req, res) => {
       );
     }
 
+    if (tag && tag !== "ALL") {
+      formatted = formatted.filter((contact) =>
+        contact.tags?.includes(tag)
+      );
+    }
+
     return res.status(200).json({
       message: "Contacts fetched successfully.",
       contacts: formatted,
@@ -180,10 +191,11 @@ export const getContacts = async (req, res) => {
     return res.status(500).json({ message: "Server error." });
   }
 };
+
 export const updateContact = async (req, res) => {
   try {
     const { contactId } = req.params;
-    const { name, phone, altPhone, age, city, sourceNote } = req.body;
+    const { name, phone, altPhone, age, city, sourceNote, tags } = req.body;
 
     const contact = await prisma.contact.findUnique({
       where: { id: Number(contactId) },
@@ -198,11 +210,10 @@ export const updateContact = async (req, res) => {
         message: "You are not allowed to update this contact.",
       });
     }
+
     if (!phone) {
-  return res.status(400).json({
-    message: "Phone is required.",
-  });
-}
+      return res.status(400).json({ message: "Phone is required." });
+    }
 
     const updatedContact = await prisma.contact.update({
       where: { id: Number(contactId) },
@@ -213,6 +224,7 @@ export const updateContact = async (req, res) => {
         age: age !== undefined && age !== null && age !== "" ? Number(age) : null,
         city: city || null,
         sourceNote: sourceNote || null,
+        ...(tags !== undefined ? { tags: normalizeTags(tags) } : {}),
       },
     });
 
@@ -243,7 +255,6 @@ export const deleteContact = async (req, res) => {
         message: "You are not allowed to delete this contact.",
       });
     }
-    
 
     await prisma.contact.update({
       where: { id: Number(contactId) },
@@ -260,6 +271,7 @@ export const deleteContact = async (req, res) => {
     return res.status(500).json({ message: "Server error." });
   }
 };
+
 export const importContacts = async (req, res) => {
   try {
     const { contacts } = req.body;
@@ -289,8 +301,13 @@ export const importContacts = async (req, res) => {
           altPhone: row.altPhone
             ? String(row.altPhone).replace(/\D/g, "").slice(-10)
             : null,
+          age:
+            row.age !== undefined && row.age !== null && row.age !== ""
+              ? Number(row.age)
+              : null,
           city: row.city || null,
           sourceNote: row.sourceNote || "Imported from Excel",
+          tags: normalizeTags(row.tags || row.tag),
           importSource: "EXCEL",
           importBatchId: batchId,
           createdById: req.user.id,
@@ -376,7 +393,6 @@ export const getContactBatches = async (req, res) => {
   }
 };
 
-
 export const convertContactToLead = async (req, res) => {
   try {
     const { contactId } = req.params;
@@ -422,7 +438,9 @@ export const convertContactToLead = async (req, res) => {
         },
       });
 
-      const allowedCompanyIds = advisor.advisorCompanies.map((item) => item.companyId);
+      const allowedCompanyIds = advisor.advisorCompanies.map(
+        (item) => item.companyId
+      );
 
       if (!allowedCompanyIds.includes(numericCompanyId)) {
         return res.status(403).json({
@@ -490,13 +508,8 @@ export const convertContactToLead = async (req, res) => {
 export const addContactActivity = async (req, res) => {
   try {
     const { contactId } = req.params;
-    const {
-      activityType,
-      companyId,
-      templateId,
-      note,
-      nextFollowUpAt,
-    } = req.body;
+    const { activityType, companyId, templateId, note, nextFollowUpAt } =
+      req.body;
 
     if (!activityType) {
       return res.status(400).json({
