@@ -7,6 +7,7 @@ const adapter = new PrismaMariaDb({
   user: "u674178439_insurecrm",
   password: "Insure@crm43",
   database: "u674178439_insure_crm",
+  charset: "utf8mb4",
 });
 
 const prisma = new PrismaClient({ adapter });
