@@ -1,23 +1,100 @@
 import bcrypt from "bcryptjs";
-import prisma from "../config/prisma.js";
+import { db } from "../config/db.js";
 
 const DEFAULT_TEMPLATE_BODY = `Dear *{client_name}*,
 
 Thank you for your valuable time.
 
-Based on age *{age}*, we are sharing a suitable *{template_title}* from Team - insurehubballi.
+we are sharing a suitable *{template_title}* from Team - insurehubballi.
 
 For more details, please contact:
 *{advisor_name}*
 *{advisor_mobile}*
+*{advisor_url}*
 
 Team - insurehubballi
 Your Cover, Our Care`;
 
-// Admin creates advisor and sets initial password + company mappings
-export const createAdvisor = async (req, res) => {
+/* =========================
+   COMPANIES
+========================= */
+
+export const getAllCompanies = async (req, res) => {
   try {
-    const { name, phone, password, companyIds } = req.body;
+    const [companies] = await db.query(
+      `SELECT id, code, name
+       FROM \`Company\`
+       WHERE isActive = 1
+       ORDER BY name ASC`
+    );
+
+    return res.status(200).json({
+      message: "Companies fetched successfully.",
+      companies,
+    });
+  } catch (error) {
+    console.error("getAllCompanies error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+/* =========================
+   ADVISORS
+========================= */
+
+export const getAllAdvisors = async (req, res) => {
+  try {
+    const [advisors] = await db.query(
+  `SELECT id, name, phone, advisorUrl, role, isActive, mustChangePassword, createdAt
+   FROM \`User\`
+   WHERE role = 'ADVISOR'
+   ORDER BY createdAt DESC`
+);
+
+    const advisorIds = advisors.map((a) => a.id);
+
+    let companiesByAdvisor = {};
+
+    if (advisorIds.length > 0) {
+      const [companyRows] = await db.query(
+        `SELECT ac.advisorId, c.id, c.code, c.name
+         FROM AdvisorCompany ac
+         JOIN \`Company\` c ON c.id = ac.companyId
+         WHERE ac.advisorId IN (?)`,
+        [advisorIds]
+      );
+
+      companiesByAdvisor = companyRows.reduce((acc, row) => {
+        if (!acc[row.advisorId]) acc[row.advisorId] = [];
+        acc[row.advisorId].push({
+          id: row.id,
+          code: row.code,
+          name: row.name,
+        });
+        return acc;
+      }, {});
+    }
+
+    return res.status(200).json({
+      message: "Advisors fetched successfully.",
+      advisors: advisors.map((advisor) => ({
+        ...advisor,
+        isActive: Boolean(advisor.isActive),
+        mustChangePassword: Boolean(advisor.mustChangePassword),
+        companies: companiesByAdvisor[advisor.id] || [],
+      })),
+    });
+  } catch (error) {
+    console.error("getAllAdvisors error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+export const createAdvisor = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const { name, phone, password, companyIds, advisorUrl } = req.body;
 
     if (!name || !phone || !password) {
       return res.status(400).json({
@@ -31,29 +108,25 @@ export const createAdvisor = async (req, res) => {
       });
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { phone },
-    });
+    const numericCompanyIds = companyIds.map(Number);
 
-    if (existingUser) {
+    const [existingRows] = await connection.query(
+      `SELECT id FROM \`User\` WHERE phone = ? LIMIT 1`,
+      [phone]
+    );
+
+    if (existingRows.length > 0) {
       return res.status(400).json({ message: "Phone number already exists." });
     }
 
-    const companies = await prisma.company.findMany({
-      where: {
-        id: {
-          in: companyIds,
-        },
-        isActive: true,
-      },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-      },
-    });
+    const [companies] = await connection.query(
+      `SELECT id, code, name
+       FROM Company
+       WHERE id IN (?) AND isActive = 1`,
+      [numericCompanyIds]
+    );
 
-    if (companies.length !== companyIds.length) {
+    if (companies.length !== numericCompanyIds.length) {
       return res.status(400).json({
         message: "One or more selected companies are invalid.",
       });
@@ -61,399 +134,57 @@ export const createAdvisor = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const advisor = await prisma.user.create({
-      data: {
-        name,
-        phone,
-        password: hashedPassword,
-        role: "ADVISOR",
-        mustChangePassword: true,
-        advisorCompanies: {
-          create: companyIds.map((companyId) => ({
-            companyId,
-          })),
-        },
-      },
-      include: {
-        advisorCompanies: {
-          include: {
-            company: {
-              select: {
-                id: true,
-                code: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const finalAdvisorUrl =
+      advisorUrl && advisorUrl.trim() ? advisorUrl.trim() : null;
+
+    await connection.beginTransaction();
+
+    const [result] = await connection.query(
+      `INSERT INTO \`User\`
+       (name, phone, password, advisorUrl, role, isActive, mustChangePassword, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, 'ADVISOR', 1, 1, NOW(), NOW())`,
+      [name, phone, hashedPassword, finalAdvisorUrl]
+    );
+
+    const advisorId = result.insertId;
+
+    for (const companyId of numericCompanyIds) {
+      await connection.query(
+        `INSERT INTO AdvisorCompany (advisorId, companyId)
+         VALUES (?, ?)`,
+        [advisorId, companyId]
+      );
+    }
+
+    await connection.commit();
 
     return res.status(201).json({
       message: "Advisor created successfully.",
       user: {
-        id: advisor.id,
-        name: advisor.name,
-        phone: advisor.phone,
-        role: advisor.role,
-        mustChangePassword: advisor.mustChangePassword,
-        companies: advisor.advisorCompanies.map((item) => item.company),
+        id: advisorId,
+        name,
+        phone,
+        advisorUrl: finalAdvisorUrl,
+        role: "ADVISOR",
+        mustChangePassword: true,
+        companies,
       },
     });
   } catch (error) {
+    await connection.rollback();
     console.error("createAdvisor error:", error);
     return res.status(500).json({ message: "Server error." });
-  }
-};
-// Admin sees all password reset requests
-export const getPasswordResetRequests = async (req, res) => {
-  try {
-    const requests = await prisma.passwordResetRequest.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            role: true,
-          },
-        },
-        handledBy: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            role: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    const formattedRequests = requests.map((request) => ({
-      id: request.id,
-      phone: request.phone || request.user?.phone || "",
-      message: request.message || "",
-      status: request.status,
-      createdAt: request.createdAt,
-      completedAt: request.completedAt || null,
-      adminNote: request.adminNote || "",
-      user: request.user
-        ? {
-            id: request.user.id,
-            name: request.user.name,
-            phone: request.user.phone,
-            role: request.user.role,
-          }
-        : null,
-      handledBy: request.handledBy
-        ? {
-            id: request.handledBy.id,
-            name: request.handledBy.name,
-            phone: request.handledBy.phone,
-            role: request.handledBy.role,
-          }
-        : null,
-    }));
-
-    return res.status(200).json({
-      message: "Password reset requests fetched successfully.",
-      requests: formattedRequests,
-    });
-  } catch (error) {
-    console.error("getPasswordResetRequests error:", error);
-    return res.status(500).json({ message: "Server error." });
-  }
-};
-
-// Admin manually sets new password and completes request
-export const completePasswordResetRequest = async (req, res) => {
-  try {
-    const { requestId } = req.params;
-    const { newPassword, adminNote } = req.body;
-
-    if (!newPassword) {
-      return res.status(400).json({ message: "New password is required." });
-    }
-
-    const resetRequest = await prisma.passwordResetRequest.findUnique({
-      where: { id: Number(requestId) },
-      include: {
-        user: true,
-      },
-    });
-
-    if (!resetRequest) {
-      return res.status(404).json({ message: "Reset request not found." });
-    }
-
-    if (resetRequest.status !== "PENDING") {
-      return res.status(400).json({
-        message: "This request has already been processed.",
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: resetRequest.userId },
-        data: {
-          password: hashedPassword,
-        },
-      }),
-      prisma.passwordResetRequest.update({
-        where: { id: Number(requestId) },
-        data: {
-          status: "COMPLETED",
-          adminNote: adminNote || null,
-          handledById: req.user.id,
-          completedAt: new Date(),
-        },
-      }),
-    ]);
-
-    return res.status(200).json({
-      message: "Password reset completed successfully.",
-    });
-  } catch (error) {
-    console.error("completePasswordResetRequest error:", error);
-    return res.status(500).json({ message: "Server error." });
-  }
-};
-
-// Optional: admin can reject request
-export const rejectPasswordResetRequest = async (req, res) => {
-  try {
-    const { requestId } = req.params;
-    const { adminNote } = req.body;
-
-    const resetRequest = await prisma.passwordResetRequest.findUnique({
-      where: { id: Number(requestId) },
-    });
-
-    if (!resetRequest) {
-      return res.status(404).json({ message: "Reset request not found." });
-    }
-
-    if (resetRequest.status !== "PENDING") {
-      return res.status(400).json({
-        message: "This request has already been processed.",
-      });
-    }
-
-    await prisma.passwordResetRequest.update({
-      where: { id: Number(requestId) },
-      data: {
-        status: "REJECTED",
-        adminNote: adminNote || null,
-        handledById: req.user.id,
-        completedAt: new Date(),
-      },
-    });
-
-    return res.status(200).json({
-      message: "Password reset request rejected successfully.",
-    });
-  } catch (error) {
-    console.error("rejectPasswordResetRequest error:", error);
-    return res.status(500).json({ message: "Server error." });
-  }
-};
-export const getAllCompanies = async (req, res) => {
-  try {
-    const companies = await prisma.company.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-      },
-    });
-
-    return res.status(200).json({
-      message: "Companies fetched successfully.",
-      companies,
-    });
-  } catch (error) {
-    console.error("getAllCompanies error:", error);
-    return res.status(500).json({ message: "Server error." });
-  }
-};
-
-export const getAllAdvisors = async (req, res) => {
-  try {
-    const advisors = await prisma.user.findMany({
-      where: {
-        role: "ADVISOR",
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        mustChangePassword: true,
-        createdAt: true,
-        advisorCompanies: {
-          select: {
-            company: {
-              select: {
-                id: true,
-                code: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return res.status(200).json({
-      message: "Advisors fetched successfully.",
-      advisors: advisors.map((advisor) => ({
-        ...advisor,
-        companies: advisor.advisorCompanies.map((item) => item.company),
-      })),
-    });
-  } catch (error) {
-    console.error("getAllAdvisors error:", error);
-    return res.status(500).json({ message: "Server error." });
-  }
-};
-
-export const createTemplate = async (req, res) => {
-  try {
-    const {
-      companyId,
-      title,
-      tagline,
-      body,
-      minAge,
-      maxAge,
-      pdfUrl,
-    } = req.body;
-
-    if (!companyId || !title) {
-      return res.status(400).json({
-        message: "Company, title are required.",
-      });
-    }
-
-    const company = await prisma.company.findUnique({
-      where: { id: Number(companyId) },
-    });
-
-    if (!company || !company.isActive) {
-      return res.status(400).json({
-        message: "Invalid company selected.",
-      });
-    }
-
-    const template = await prisma.template.create({
-      data: {
-        companyId: Number(companyId),
-        title,
-        tagline: tagline || null,
-        body: body?.trim() ? body.trim() : DEFAULT_TEMPLATE_BODY,
-        minAge: minAge !== undefined && minAge !== null && minAge !== "" ? Number(minAge) : null,
-        maxAge: maxAge !== undefined && maxAge !== null && maxAge !== "" ? Number(maxAge) : null,
-        pdfUrl: pdfUrl || null,
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    return res.status(201).json({
-      message: "Template created successfully.",
-      template,
-    });
-  } catch (error) {
-    console.error("createTemplate error:", error);
-    return res.status(500).json({ message: "Server error." });
-  }
-};
-
-export const getAllTemplates = async (req, res) => {
-  try {
-    const page = Math.max(Number(req.query.page) || 1, 1);
-    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
-    const skip = (page - 1) * limit;
-
-    const search = req.query.search || "";
-    const companyId =
-      req.query.companyId && req.query.companyId !== "ALL"
-        ? Number(req.query.companyId)
-        : null;
-
-    const where = {
-      ...(companyId ? { companyId } : {}),
-      ...(search
-        ? {
-            OR: [
-              { title: { contains: search } },
-              { tagline: { contains: search } },
-              {
-                company: {
-                  name: { contains: search },
-                },
-              },
-            ],
-          }
-        : {}),
-    };
-
-    const [templates, total] = await Promise.all([
-      prisma.template.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          company: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-            },
-          },
-        },
-      }),
-      prisma.template.count({ where }),
-    ]);
-
-    return res.status(200).json({
-      message: "Templates fetched successfully.",
-      templates,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error) {
-    console.error("getAllTemplates error:", error);
-    return res.status(500).json({ message: "Server error." });
+  } finally {
+    connection.release();
   }
 };
 export const updateAdvisor = async (req, res) => {
+  const connection = await db.getConnection();
+
   try {
     const { advisorId } = req.params;
-    const { name, phone, companyIds } = req.body;
+    const { name, phone, companyIds, advisorUrl } = req.body;
+    const numericAdvisorId = Number(advisorId);
 
     if (!name || !phone) {
       return res.status(400).json({
@@ -467,97 +198,85 @@ export const updateAdvisor = async (req, res) => {
       });
     }
 
-    const advisor = await prisma.user.findUnique({
-      where: { id: Number(advisorId) },
-      include: {
-        advisorCompanies: true,
-      },
-    });
+    const numericCompanyIds = companyIds.map(Number);
 
-    if (!advisor || advisor.role !== "ADVISOR") {
+    const [advisorRows] = await connection.query(
+      `SELECT id, role FROM \`User\` WHERE id = ? LIMIT 1`,
+      [numericAdvisorId]
+    );
+
+    if (advisorRows.length === 0 || advisorRows[0].role !== "ADVISOR") {
       return res.status(404).json({ message: "Advisor not found." });
     }
 
-    const existingPhoneUser = await prisma.user.findFirst({
-      where: {
-        phone,
-        NOT: { id: Number(advisorId) },
-      },
-    });
+    const [phoneRows] = await connection.query(
+      `SELECT id FROM \`User\` WHERE phone = ? AND id != ? LIMIT 1`,
+      [phone, numericAdvisorId]
+    );
 
-    if (existingPhoneUser) {
+    if (phoneRows.length > 0) {
       return res.status(400).json({
         message: "Phone number already exists.",
       });
     }
 
-    const companies = await prisma.company.findMany({
-      where: {
-        id: { in: companyIds },
-        isActive: true,
-      },
-      select: { id: true },
-    });
+    const [companies] = await connection.query(
+      `SELECT id, code, name
+       FROM Company
+       WHERE id IN (?) AND isActive = 1`,
+      [numericCompanyIds]
+    );
 
-    if (companies.length !== companyIds.length) {
+    if (companies.length !== numericCompanyIds.length) {
       return res.status(400).json({
         message: "One or more selected companies are invalid.",
       });
     }
 
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: Number(advisorId) },
-        data: {
-          name,
-          phone,
-        },
-      }),
-      prisma.advisorCompany.deleteMany({
-        where: { advisorId: Number(advisorId) },
-      }),
-      prisma.advisorCompany.createMany({
-        data: companyIds.map((companyId) => ({
-          advisorId: Number(advisorId),
-          companyId,
-        })),
-      }),
-    ]);
+    const finalAdvisorUrl =
+      advisorUrl && advisorUrl.trim() ? advisorUrl.trim() : null;
 
-    const updatedAdvisor = await prisma.user.findUnique({
-      where: { id: Number(advisorId) },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        mustChangePassword: true,
-        createdAt: true,
-        advisorCompanies: {
-          select: {
-            company: {
-              select: {
-                id: true,
-                code: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    await connection.beginTransaction();
+
+    await connection.query(
+      `UPDATE \`User\`
+       SET name = ?, phone = ?, advisorUrl = ?, updatedAt = NOW()
+       WHERE id = ?`,
+      [name, phone, finalAdvisorUrl, numericAdvisorId]
+    );
+
+    await connection.query(
+      `DELETE FROM AdvisorCompany WHERE advisorId = ?`,
+      [numericAdvisorId]
+    );
+
+    for (const companyId of numericCompanyIds) {
+      await connection.query(
+        `INSERT INTO AdvisorCompany (advisorId, companyId)
+         VALUES (?, ?)`,
+        [numericAdvisorId, companyId]
+      );
+    }
+
+    await connection.commit();
 
     return res.status(200).json({
       message: "Advisor updated successfully.",
       advisor: {
-        ...updatedAdvisor,
-        companies: updatedAdvisor.advisorCompanies.map((item) => item.company),
+        id: numericAdvisorId,
+        name,
+        phone,
+        advisorUrl: finalAdvisorUrl,
+        role: "ADVISOR",
+        companies,
       },
     });
   } catch (error) {
+    await connection.rollback();
     console.error("updateAdvisor error:", error);
     return res.status(500).json({ message: "Server error." });
+  } finally {
+    connection.release();
   }
 };
 
@@ -572,23 +291,23 @@ export const resetAdvisorPassword = async (req, res) => {
       });
     }
 
-    const advisor = await prisma.user.findUnique({
-      where: { id: Number(advisorId) },
-    });
+    const [advisorRows] = await db.query(
+      `SELECT id, role FROM \`User\` WHERE id = ? LIMIT 1`,
+      [Number(advisorId)]
+    );
 
-    if (!advisor || advisor.role !== "ADVISOR") {
+    if (advisorRows.length === 0 || advisorRows[0].role !== "ADVISOR") {
       return res.status(404).json({ message: "Advisor not found." });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await prisma.user.update({
-      where: { id: Number(advisorId) },
-      data: {
-        password: hashedPassword,
-        mustChangePassword: true,
-      },
-    });
+    await db.query(
+      `UPDATE \`User\`
+       SET password = ?, mustChangePassword = 1, updatedAt = NOW()
+       WHERE id = ?`,
+      [hashedPassword, Number(advisorId)]
+    );
 
     return res.status(200).json({
       message: "Advisor password reset successfully.",
@@ -603,38 +322,385 @@ export const toggleAdvisorStatus = async (req, res) => {
   try {
     const { advisorId } = req.params;
 
-    const advisor = await prisma.user.findUnique({
-      where: { id: Number(advisorId) },
-    });
+    const [advisorRows] = await db.query(
+      `SELECT id, name, phone, role, isActive, mustChangePassword
+       FROM \`User\`
+       WHERE id = ?
+       LIMIT 1`,
+      [Number(advisorId)]
+    );
 
-    if (!advisor || advisor.role !== "ADVISOR") {
+    if (advisorRows.length === 0 || advisorRows[0].role !== "ADVISOR") {
       return res.status(404).json({ message: "Advisor not found." });
     }
 
-    const updatedAdvisor = await prisma.user.update({
-      where: { id: Number(advisorId) },
-      data: {
-        isActive: !advisor.isActive,
-      },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        mustChangePassword: true,
-      },
-    });
+    const newStatus = advisorRows[0].isActive ? 0 : 1;
+
+    await db.query(
+      `UPDATE \`User\` SET isActive = ?, updatedAt = NOW()
+       WHERE id = ?`,
+      [newStatus, Number(advisorId)]
+    );
 
     return res.status(200).json({
-      message: `Advisor ${updatedAdvisor.isActive ? "activated" : "deactivated"} successfully.`,
-      advisor: updatedAdvisor,
+      message: `Advisor ${newStatus ? "activated" : "deactivated"} successfully.`,
+      advisor: {
+        ...advisorRows[0],
+        isActive: Boolean(newStatus),
+        mustChangePassword: Boolean(advisorRows[0].mustChangePassword),
+      },
     });
   } catch (error) {
     console.error("toggleAdvisorStatus error:", error);
     return res.status(500).json({ message: "Server error." });
   }
 };
+
+/* =========================
+   PASSWORD RESET REQUESTS
+========================= */
+
+export const getPasswordResetRequests = async (req, res) => {
+  try {
+    const [requests] = await db.query(
+      `SELECT 
+         prr.id,
+         prr.userId,
+         prr.requestedBy AS phone,
+         prr.requestNote AS message,
+         prr.status,
+         prr.adminNote,
+         prr.handledById,
+         prr.completedAt,
+         prr.createdAt,
+         prr.updatedAt,
+
+         u.id AS user_id,
+         u.name AS user_name,
+         u.phone AS user_phone,
+         u.role AS user_role,
+
+         hb.id AS handledBy_id,
+         hb.name AS handledBy_name,
+         hb.phone AS handledBy_phone,
+         hb.role AS handledBy_role
+
+       FROM PasswordResetRequest prr
+       LEFT JOIN \`User\` u ON u.id = prr.userId
+       LEFT JOIN \`User\` hb ON hb.id = prr.handledById
+       ORDER BY prr.createdAt DESC`
+    );
+
+    const formattedRequests = requests.map((request) => ({
+      id: request.id,
+      phone: request.phone || request.user_phone || "",
+      message: request.message || "",
+      status: request.status,
+      createdAt: request.createdAt,
+      completedAt: request.completedAt || null,
+      adminNote: request.adminNote || "",
+      user: request.user_id
+        ? {
+            id: request.user_id,
+            name: request.user_name,
+            phone: request.user_phone,
+            role: request.user_role,
+          }
+        : null,
+      handledBy: request.handledBy_id
+        ? {
+            id: request.handledBy_id,
+            name: request.handledBy_name,
+            phone: request.handledBy_phone,
+            role: request.handledBy_role,
+          }
+        : null,
+    }));
+
+    return res.status(200).json({
+      message: "Password reset requests fetched successfully.",
+      requests: formattedRequests,
+    });
+  } catch (error) {
+    console.error("getPasswordResetRequests error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+export const completePasswordResetRequest = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const { requestId } = req.params;
+    const { newPassword, adminNote } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ message: "New password is required." });
+    }
+
+    const [requestRows] = await connection.query(
+      `SELECT id, userId, status
+       FROM PasswordResetRequest
+       WHERE id = ?
+       LIMIT 1`,
+      [Number(requestId)]
+    );
+
+    if (requestRows.length === 0) {
+      return res.status(404).json({ message: "Reset request not found." });
+    }
+
+    const resetRequest = requestRows[0];
+
+    if (resetRequest.status !== "PENDING") {
+      return res.status(400).json({
+        message: "This request has already been processed.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await connection.beginTransaction();
+
+    await connection.query(
+      `UPDATE \`User\`
+       SET password = ?, updatedAt = NOW()
+       WHERE id = ?`,
+      [hashedPassword, resetRequest.userId]
+    );
+
+    await connection.query(
+      `UPDATE PasswordResetRequest
+       SET status = 'COMPLETED',
+           adminNote = ?,
+           handledById = ?,
+           completedAt = NOW(),
+           updatedAt = NOW()
+       WHERE id = ?`,
+      [adminNote || null, req.user.id, Number(requestId)]
+    );
+
+    await connection.commit();
+
+    return res.status(200).json({
+      message: "Password reset completed successfully.",
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("completePasswordResetRequest error:", error);
+    return res.status(500).json({ message: "Server error." });
+  } finally {
+    connection.release();
+  }
+};
+
+export const rejectPasswordResetRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { adminNote } = req.body;
+
+    const [requestRows] = await db.query(
+      `SELECT id, status
+       FROM PasswordResetRequest
+       WHERE id = ?
+       LIMIT 1`,
+      [Number(requestId)]
+    );
+
+    if (requestRows.length === 0) {
+      return res.status(404).json({ message: "Reset request not found." });
+    }
+
+    if (requestRows[0].status !== "PENDING") {
+      return res.status(400).json({
+        message: "This request has already been processed.",
+      });
+    }
+
+    await db.query(
+      `UPDATE PasswordResetRequest
+       SET status = 'REJECTED',
+           adminNote = ?,
+           handledById = ?,
+           completedAt = NOW(),
+           updatedAt = NOW()
+       WHERE id = ?`,
+      [adminNote || null, req.user.id, Number(requestId)]
+    );
+
+    return res.status(200).json({
+      message: "Password reset request rejected successfully.",
+    });
+  } catch (error) {
+    console.error("rejectPasswordResetRequest error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+/* =========================
+   TEMPLATES
+========================= */
+
+export const createTemplate = async (req, res) => {
+  try {
+    const { companyId, title, tagline, body, minAge, maxAge, pdfUrl } = req.body;
+
+    if (!companyId || !title) {
+      return res.status(400).json({
+        message: "Company, title are required.",
+      });
+    }
+
+    const [companyRows] = await db.query(
+      `SELECT id, code, name, isActive
+       FROM \`Company\`
+       WHERE id = ?
+       LIMIT 1`,
+      [Number(companyId)]
+    );
+
+    if (companyRows.length === 0 || !companyRows[0].isActive) {
+      return res.status(400).json({
+        message: "Invalid company selected.",
+      });
+    }
+
+    const finalBody = body?.trim() ? body.trim() : DEFAULT_TEMPLATE_BODY;
+
+    const [result] = await db.query(
+      `INSERT INTO \`Template\`
+       (companyId, title, tagline, body, minAge, maxAge, pdfUrl, isActive, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+      [
+        Number(companyId),
+        title,
+        tagline || null,
+        finalBody,
+        minAge !== undefined && minAge !== null && minAge !== "" ? Number(minAge) : null,
+        maxAge !== undefined && maxAge !== null && maxAge !== "" ? Number(maxAge) : null,
+        pdfUrl || null,
+      ]
+    );
+
+    const [templateRows] = await db.query(
+      `SELECT 
+         t.*,
+         c.id AS company_id,
+         c.code AS company_code,
+         c.name AS company_name
+       FROM \`Template\` t
+       JOIN \`Company\` c ON c.id = t.companyId
+       WHERE t.id = ?
+       LIMIT 1`,
+      [result.insertId]
+    );
+
+    const template = templateRows[0];
+
+    return res.status(201).json({
+      message: "Template created successfully.",
+      template: {
+        ...template,
+        isActive: Boolean(template.isActive),
+        company: {
+          id: template.company_id,
+          code: template.company_code,
+          name: template.company_name,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("createTemplate error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+export const getAllTemplates = async (req, res) => {
+  try {
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
+    const offset = (page - 1) * limit;
+
+    const search = req.query.search || "";
+    const companyId =
+      req.query.companyId && req.query.companyId !== "ALL"
+        ? Number(req.query.companyId)
+        : null;
+
+    const whereParts = [];
+    const params = [];
+
+    if (companyId) {
+      whereParts.push("t.companyId = ?");
+      params.push(companyId);
+    }
+
+    if (search) {
+      whereParts.push("(t.title LIKE ? OR t.tagline LIKE ? OR c.name LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    const whereSql = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
+
+    const [templates] = await db.query(
+      `SELECT 
+         t.*,
+         c.id AS company_id,
+         c.code AS company_code,
+         c.name AS company_name
+       FROM \`Template\` t
+       JOIN \`Company\` c ON c.id = t.companyId
+       ${whereSql}
+       ORDER BY t.createdAt DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) AS total
+       FROM \`Template\` t
+       JOIN \`Company\` c ON c.id = t.companyId
+       ${whereSql}`,
+      params
+    );
+
+    const total = countRows[0].total;
+
+    const formattedTemplates = templates.map((template) => ({
+      id: template.id,
+      companyId: template.companyId,
+      title: template.title,
+      tagline: template.tagline,
+      body: template.body,
+      minAge: template.minAge,
+      maxAge: template.maxAge,
+      pdfUrl: template.pdfUrl,
+      isActive: Boolean(template.isActive),
+      createdAt: template.createdAt,
+      updatedAt: template.updatedAt,
+      company: {
+        id: template.company_id,
+        code: template.company_code,
+        name: template.company_name,
+      },
+    }));
+
+    return res.status(200).json({
+      message: "Templates fetched successfully.",
+      templates: formattedTemplates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("getAllTemplates error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
 export const updateTemplate = async (req, res) => {
   try {
     const { templateId } = req.params;
@@ -646,55 +712,84 @@ export const updateTemplate = async (req, res) => {
       });
     }
 
-    const existingTemplate = await prisma.template.findUnique({
-      where: { id: Number(templateId) },
-    });
+    const [templateRows] = await db.query(
+      `SELECT id FROM \`Template\` WHERE id = ? LIMIT 1`,
+      [Number(templateId)]
+    );
 
-    if (!existingTemplate) {
+    if (templateRows.length === 0) {
       return res.status(404).json({ message: "Template not found." });
     }
 
-    const company = await prisma.company.findUnique({
-      where: { id: Number(companyId) },
-    });
+    const [companyRows] = await db.query(
+      `SELECT id, isActive FROM \`Company\` WHERE id = ? LIMIT 1`,
+      [Number(companyId)]
+    );
 
-    if (!company || !company.isActive) {
+    if (companyRows.length === 0 || !companyRows[0].isActive) {
       return res.status(400).json({
         message: "Invalid company selected.",
       });
     }
 
-    const updatedTemplate = await prisma.template.update({
-      where: { id: Number(templateId) },
-      data: {
-        companyId: Number(companyId),
+    await db.query(
+      `UPDATE \`Template\`
+       SET companyId = ?,
+           title = ?,
+           tagline = ?,
+           body = ?,
+           minAge = ?,
+           maxAge = ?,
+           pdfUrl = ?,
+           updatedAt = NOW()
+       WHERE id = ?`,
+      [
+        Number(companyId),
         title,
-        tagline: tagline || null,
-        body: body?.trim() ? body.trim() : DEFAULT_TEMPLATE_BODY,
-        minAge:
-          minAge !== undefined && minAge !== null && minAge !== ""
-            ? Number(minAge)
-            : null,
-        maxAge:
-          maxAge !== undefined && maxAge !== null && maxAge !== ""
-            ? Number(maxAge)
-            : null,
-        pdfUrl: pdfUrl || null,
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-          },
-        },
-      },
-    });
+        tagline || null,
+        body?.trim() ? body.trim() : DEFAULT_TEMPLATE_BODY,
+        minAge !== undefined && minAge !== null && minAge !== "" ? Number(minAge) : null,
+        maxAge !== undefined && maxAge !== null && maxAge !== "" ? Number(maxAge) : null,
+        pdfUrl || null,
+        Number(templateId),
+      ]
+    );
+
+    const [updatedRows] = await db.query(
+      `SELECT 
+         t.*,
+         c.id AS company_id,
+         c.code AS company_code,
+         c.name AS company_name
+       FROM \`Template\` t
+       JOIN \`Company\` c ON c.id = t.companyId
+       WHERE t.id = ?
+       LIMIT 1`,
+      [Number(templateId)]
+    );
+
+    const updatedTemplate = updatedRows[0];
 
     return res.status(200).json({
       message: "Template updated successfully.",
-      template: updatedTemplate,
+      template: {
+        id: updatedTemplate.id,
+        companyId: updatedTemplate.companyId,
+        title: updatedTemplate.title,
+        tagline: updatedTemplate.tagline,
+        body: updatedTemplate.body,
+        minAge: updatedTemplate.minAge,
+        maxAge: updatedTemplate.maxAge,
+        pdfUrl: updatedTemplate.pdfUrl,
+        isActive: Boolean(updatedTemplate.isActive),
+        createdAt: updatedTemplate.createdAt,
+        updatedAt: updatedTemplate.updatedAt,
+        company: {
+          id: updatedTemplate.company_id,
+          code: updatedTemplate.company_code,
+          name: updatedTemplate.company_name,
+        },
+      },
     });
   } catch (error) {
     console.error("updateTemplate error:", error);
@@ -706,24 +801,34 @@ export const toggleTemplateStatus = async (req, res) => {
   try {
     const { templateId } = req.params;
 
-    const template = await prisma.template.findUnique({
-      where: { id: Number(templateId) },
-    });
+    const [templateRows] = await db.query(
+      `SELECT id, isActive FROM \`Template\` WHERE id = ? LIMIT 1`,
+      [Number(templateId)]
+    );
 
-    if (!template) {
+    if (templateRows.length === 0) {
       return res.status(404).json({ message: "Template not found." });
     }
 
-    const updatedTemplate = await prisma.template.update({
-      where: { id: Number(templateId) },
-      data: {
-        isActive: !template.isActive,
-      },
-    });
+    const newStatus = templateRows[0].isActive ? 0 : 1;
+
+    await db.query(
+      `UPDATE \`Template\` SET isActive = ?, updatedAt = NOW()
+       WHERE id = ?`,
+      [newStatus, Number(templateId)]
+    );
+
+    const [updatedRows] = await db.query(
+      `SELECT * FROM \`Template\` WHERE id = ? LIMIT 1`,
+      [Number(templateId)]
+    );
 
     return res.status(200).json({
-      message: `Template ${updatedTemplate.isActive ? "activated" : "deactivated"} successfully.`,
-      template: updatedTemplate,
+      message: `Template ${newStatus ? "activated" : "deactivated"} successfully.`,
+      template: {
+        ...updatedRows[0],
+        isActive: Boolean(updatedRows[0].isActive),
+      },
     });
   } catch (error) {
     console.error("toggleTemplateStatus error:", error);
@@ -731,42 +836,71 @@ export const toggleTemplateStatus = async (req, res) => {
   }
 };
 
+export const deleteTemplate = async (req, res) => {
+  try {
+    const { templateId } = req.params;
+
+    const [templateRows] = await db.query(
+      `SELECT id FROM \`Template\` WHERE id = ? LIMIT 1`,
+      [Number(templateId)]
+    );
+
+    if (templateRows.length === 0) {
+      return res.status(404).json({ message: "Template not found." });
+    }
+
+    const [usageRows] = await db.query(
+      `SELECT COUNT(*) AS count
+       FROM \`LeadActivity\`
+       WHERE templateId = ?`,
+      [Number(templateId)]
+    );
+
+    if (usageRows[0].count > 0) {
+      return res.status(400).json({
+        message: "This template has been used already. Deactivate it instead of deleting.",
+      });
+    }
+
+    await db.query(
+      `DELETE FROM \`Template\` WHERE id = ?`,
+      [Number(templateId)]
+    );
+
+    return res.status(200).json({
+      message: "Template deleted successfully.",
+    });
+  } catch (error) {
+    console.error("deleteTemplate error:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+/* =========================
+   PERFORMANCE
+========================= */
+
 export const getAdvisorPerformance = async (req, res) => {
   try {
-    const advisors = await prisma.user.findMany({
-      where: {
-        role: "ADVISOR",
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        isActive: true,
-        createdAt: true,
-        assignedLeads: {
-          select: {
-            id: true,
-            status: true,
-            nextFollowUpAt: true,
-            activities: {
-              orderBy: {
-                createdAt: "desc",
-              },
-              take: 1,
-              select: {
-                id: true,
-                activityType: true,
-                note: true,
-                createdAt: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const [advisors] = await db.query(
+      `SELECT id, name, phone, isActive, createdAt
+       FROM \`User\`
+       WHERE role = 'ADVISOR'
+       ORDER BY createdAt DESC`
+    );
+
+    const [leadRows] = await db.query(
+      `SELECT id, assignedToId, status, nextFollowUpAt
+       FROM \`Lead\`
+       WHERE assignedToId IS NOT NULL`
+    );
+
+    const [activityRows] = await db.query(
+      `SELECT la.id, la.leadId, la.activityType, la.note, la.createdAt, l.assignedToId
+       FROM \`LeadActivity\` la
+       JOIN \`Lead\` l ON l.id = la.leadId
+       ORDER BY la.createdAt DESC`
+    );
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -774,8 +908,20 @@ export const getAdvisorPerformance = async (req, res) => {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
+    const leadsByAdvisor = leadRows.reduce((acc, lead) => {
+      if (!acc[lead.assignedToId]) acc[lead.assignedToId] = [];
+      acc[lead.assignedToId].push(lead);
+      return acc;
+    }, {});
+
+    const activitiesByAdvisor = activityRows.reduce((acc, activity) => {
+      if (!acc[activity.assignedToId]) acc[activity.assignedToId] = [];
+      acc[activity.assignedToId].push(activity);
+      return acc;
+    }, {});
+
     const performance = advisors.map((advisor) => {
-      const leads = advisor.assignedLeads || [];
+      const leads = leadsByAdvisor[advisor.id] || [];
 
       const totalLeads = leads.length;
       const newLeads = leads.filter((lead) => lead.status === "NEW").length;
@@ -792,11 +938,8 @@ export const getAdvisorPerformance = async (req, res) => {
         return followDate >= todayStart && followDate <= todayEnd;
       }).length;
 
-      const allLatestActivities = leads
-        .flatMap((lead) => lead.activities || [])
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-      const lastActivity = allLatestActivities[0] || null;
+      const advisorActivities = activitiesByAdvisor[advisor.id] || [];
+      const lastActivity = advisorActivities[0] || null;
 
       const conversionRate =
         totalLeads > 0
@@ -813,7 +956,7 @@ export const getAdvisorPerformance = async (req, res) => {
         id: advisor.id,
         name: advisor.name,
         phone: advisor.phone,
-        isActive: advisor.isActive,
+        isActive: Boolean(advisor.isActive),
         totalLeads,
         newLeads,
         followUpLeads,
@@ -852,69 +995,99 @@ export const getAdvisorPerformance = async (req, res) => {
     });
   }
 };
+
 export const getAdvisorLeadsForAdmin = async (req, res) => {
   try {
     const { advisorId } = req.params;
 
-    const advisor = await prisma.user.findUnique({
-      where: { id: Number(advisorId) },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        role: true,
-        isActive: true,
-      },
-    });
+    const [advisorRows] = await db.query(
+      `SELECT id, name, phone, role, isActive
+       FROM \`User\`
+       WHERE id = ?
+       LIMIT 1`,
+      [Number(advisorId)]
+    );
 
-    if (!advisor || advisor.role !== "ADVISOR") {
+    if (advisorRows.length === 0 || advisorRows[0].role !== "ADVISOR") {
       return res.status(404).json({ message: "Advisor not found." });
     }
 
-    const leads = await prisma.lead.findMany({
-      where: {
-        assignedToId: Number(advisorId),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        altPhone: true,
-        age: true,
-        city: true,
-        status: true,
-        remarks: true,
-        nextFollowUpAt: true,
-        createdAt: true,
-        company: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-          },
-        },
-        activities: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 1,
-          select: {
-            id: true,
-            activityType: true,
-            note: true,
-            createdAt: true,
-          },
-        },
-      },
-    });
+    const advisor = {
+      ...advisorRows[0],
+      isActive: Boolean(advisorRows[0].isActive),
+    };
 
-    const formattedLeads = leads.map((lead) => ({
-      ...lead,
-      lastActivity: lead.activities[0] || null,
-      activities: undefined,
+    const [leadRows] = await db.query(
+      `SELECT 
+         l.id,
+         l.name,
+         l.phone,
+         l.altPhone,
+         l.age,
+         l.city,
+         l.status,
+         l.remarks,
+         l.nextFollowUpAt,
+         l.createdAt,
+         c.id AS company_id,
+         c.code AS company_code,
+         c.name AS company_name
+       FROM \`Lead\` l
+       LEFT JOIN \`Company\` c ON c.id = l.companyId
+       WHERE l.assignedToId = ?
+       ORDER BY l.createdAt DESC`,
+      [Number(advisorId)]
+    );
+
+    const leadIds = leadRows.map((lead) => lead.id);
+
+    let latestActivityByLead = {};
+
+    if (leadIds.length > 0) {
+      const [activities] = await db.query(
+        `SELECT la.*
+         FROM \`LeadActivity\` la
+         INNER JOIN (
+           SELECT leadId, MAX(createdAt) AS maxCreatedAt
+           FROM \`LeadActivity\`
+           WHERE leadId IN (?)
+           GROUP BY leadId
+         ) latest
+         ON latest.leadId = la.leadId
+         AND latest.maxCreatedAt = la.createdAt`,
+        [leadIds]
+      );
+
+      latestActivityByLead = activities.reduce((acc, activity) => {
+        acc[activity.leadId] = {
+          id: activity.id,
+          activityType: activity.activityType,
+          note: activity.note,
+          createdAt: activity.createdAt,
+        };
+        return acc;
+      }, {});
+    }
+
+    const formattedLeads = leadRows.map((lead) => ({
+      id: lead.id,
+      name: lead.name,
+      phone: lead.phone,
+      altPhone: lead.altPhone,
+      age: lead.age,
+      city: lead.city,
+      status: lead.status,
+      remarks: lead.remarks,
+      nextFollowUpAt: lead.nextFollowUpAt,
+      createdAt: lead.createdAt,
+      company: lead.company_id
+        ? {
+            id: lead.company_id,
+            code: lead.company_code,
+            name: lead.company_name,
+          }
+        : null,
+      lastActivity: latestActivityByLead[lead.id] || null,
     }));
 
     return res.status(200).json({
@@ -927,40 +1100,5 @@ export const getAdvisorLeadsForAdmin = async (req, res) => {
     return res.status(500).json({
       message: "Server error.",
     });
-  }
-};
-
-export const deleteTemplate = async (req, res) => {
-  try {
-    const { templateId } = req.params;
-
-    const template = await prisma.template.findUnique({
-      where: { id: Number(templateId) },
-    });
-
-    if (!template) {
-      return res.status(404).json({ message: "Template not found." });
-    }
-
-    const usageCount = await prisma.leadActivity.count({
-      where: { templateId: Number(templateId) },
-    });
-
-    if (usageCount > 0) {
-      return res.status(400).json({
-        message: "This template has been used already. Deactivate it instead of deleting.",
-      });
-    }
-
-    await prisma.template.delete({
-      where: { id: Number(templateId) },
-    });
-
-    return res.status(200).json({
-      message: "Template deleted successfully.",
-    });
-  } catch (error) {
-    console.error("deleteTemplate error:", error);
-    return res.status(500).json({ message: "Server error." });
   }
 };

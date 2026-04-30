@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TATA AIG MediCare Select | {{brand_name}}</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0d2d5e;
+  --blue: #1565c0;
+  --sky: #42a5f5;
+  --light-blue: #e3f2fd;
+  --lighter-blue: #f0f8ff;
+  --gold: #f59e0b;
+  --red: #c0392b;
+  --white: #ffffff;
+  --text: #1a2744;
+  --muted: #607d8b;
+  --success: #2e7d32;
+  --shadow: 0 4px 24px rgba(13,45,94,0.10);
+  --shadow-lg: 0 8px 40px rgba(13,45,94,0.16);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--lighter-blue);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ─────────────────────────────────────── */
+.header {
+  background: linear-gradient(135deg, #0d2d5e 0%, #1565c0 60%, #1976d2 100%);
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 20px rgba(13,45,94,0.3);
+}
+.header-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo-img {
+  width: 52px; height: 52px;
+  border-radius: 12px;
+  background: white;
+  padding: 3px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+.header-text { flex:1; }
+.header-brand {
+  font-family: 'Playfair Display', serif;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+.header-tagline {
+  color: rgba(255,255,255,0.75);
+  font-size: 0.72rem;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+}
+.header-call {
+  background: var(--gold);
+  color: var(--navy);
+  border: none;
+  border-radius: 24px;
+  padding: 8px 16px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 3px 12px rgba(245,158,11,0.4);
+  transition: all 0.2s;
+}
+.header-call:hover { transform: scale(1.05); }
+
+/* ── HERO ────────────────────────────────────────── */
+.hero {
+  background: linear-gradient(160deg, #0d2d5e 0%, #1565c0 50%, #42a5f5 100%);
+  padding: 36px 16px 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content:'';
+  position:absolute; top:-60px; right:-60px;
+  width:280px; height:280px;
+  background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+  border-radius:50%;
+}
+.hero::after {
+  content:'';
+  position:absolute; bottom:-40px; left:-40px;
+  width:200px; height:200px;
+  background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%);
+  border-radius:50%;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.5);
+  color: #fbbf24;
+  border-radius: 24px;
+  padding: 5px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  color: #fff;
+  font-size: clamp(1.5rem, 5vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+.hero h1 span { color: #fbbf24; }
+.hero-sub {
+  color: rgba(255,255,255,0.8);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  max-width: 520px;
+  margin: 0 auto 20px;
+  font-weight: 400;
+}
+.hero-urgent {
+  background: rgba(192,57,43,0.15);
+  border: 1.5px solid rgba(192,57,43,0.5);
+  border-radius: 12px;
+  padding: 12px 18px;
+  max-width: 520px;
+  margin: 0 auto 24px;
+  color: #fca5a5;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.hero-urgent strong { color: #fbbf24; }
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.stat-chip {
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 10px 16px;
+  text-align: center;
+  min-width: 100px;
+}
+.stat-chip .num {
+  color: #fbbf24;
+  font-size: 1.1rem;
+  font-weight: 900;
+  display: block;
+}
+.stat-chip .lbl {
+  color: rgba(255,255,255,0.75);
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.hero-cta {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: var(--navy);
+  border: none;
+  border-radius: 30px;
+  padding: 14px 28px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 900;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 6px 20px rgba(245,158,11,0.4);
+  transition: all 0.2s;
+  letter-spacing: 0.01em;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(245,158,11,0.5); }
+.btn-secondary {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.4);
+  border-radius: 30px;
+  padding: 14px 24px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.2); }
+
+/* ── URGENCY BANNER ─────────────────────────────── */
+.urgency-banner {
+  background: linear-gradient(90deg, #c0392b, #e74c3c, #c0392b);
+  background-size: 200% 100%;
+  animation: slide-bg 3s linear infinite;
+  padding: 10px 16px;
+  text-align: center;
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+@keyframes slide-bg {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+/* ── CHAT WRAPPER ───────────────────────────────── */
+.chat-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 12px 32px;
+}
+
+/* ── SECTION TITLE ──────────────────────────────── */
+.section-title {
+  text-align: center;
+  padding: 32px 16px 16px;
+}
+.section-title h2 {
+  font-family: 'Playfair Display', serif;
+  color: var(--navy);
+  font-size: clamp(1.2rem, 4vw, 1.6rem);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.section-title p {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 400;
+}
+.section-divider {
+  width: 48px; height: 4px;
+  background: linear-gradient(90deg, var(--blue), var(--sky));
+  border-radius: 4px;
+  margin: 8px auto 0;
+}
+
+/* ── CHAT BOX ───────────────────────────────────── */
+.chat-box {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.chat-header-bar {
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bot-avatar {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--gold), #fbbf24);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(245,158,11,0.4);
+}
+.bot-info .name { color: #fff; font-weight: 800; font-size: 0.95rem; }
+.bot-info .status {
+  color: rgba(255,255,255,0.65);
+  font-size: 0.72rem;
+  display: flex; align-items: center; gap: 5px;
+}
+.online-dot {
+  width: 7px; height: 7px;
+  background: #4ade80;
+  border-radius: 50%;
+  animation: blink 2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.chat-messages {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 480px;
+  overflow-y: auto;
+  background: #f7fbff;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-thumb { background: #b0c4de; border-radius:4px; }
+
+.msg { display: flex; gap: 8px; animation: fadeUp 0.3s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.msg.bot { align-items: flex-end; }
+.msg.user { justify-content: flex-end; }
+
+.msg-av {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--gold), #fbbf24);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.bubble {
+  max-width: 82%;
+  padding: 11px 15px;
+  border-radius: 18px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+.msg.bot .bubble {
+  background: #fff;
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 12px rgba(13,45,94,0.08);
+  border-left: 3px solid var(--sky);
+}
+.msg.user .bubble {
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+/* Quick reply chips */
+.chips-area {
+  padding: 8px 16px 12px 44px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.chip {
+  background: #fff;
+  border: 1.5px solid var(--sky);
+  color: var(--blue);
+  border-radius: 20px;
+  padding: 6px 13px;
+  font-size: 0.78rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(66,165,245,0.15);
+}
+.chip:hover, .chip:active {
+  background: var(--blue);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(21,101,192,0.3);
+}
+
+/* Typing */
+.typing { display:flex; gap:8px; padding:0 0 4px 44px; }
+.typing-bubble {
+  background: #fff;
+  border-radius: 18px;
+  border-bottom-left-radius: 4px;
+  padding: 10px 14px;
+  display: flex; gap: 4px; align-items: center;
+  box-shadow: 0 2px 12px rgba(13,45,94,0.08);
+  border-left: 3px solid var(--sky);
+}
+.dot { width:7px; height:7px; background: var(--sky); border-radius:50%; animation: bounce 1.2s infinite; }
+.dot:nth-child(2){animation-delay:0.2s} .dot:nth-child(3){animation-delay:0.4s}
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+.typing.hidden { display:none; }
+
+/* Input row */
+.input-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fff;
+  border-top: 1px solid #e3f2fd;
+}
+.msg-input {
+  flex: 1;
+  border: 1.5px solid #b0d4f1;
+  border-radius: 24px;
+  padding: 10px 16px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: var(--lighter-blue);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.msg-input:focus { border-color: var(--sky); background: #fff; }
+.msg-input::placeholder { color: #90a4ae; }
+.send-btn {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  border: none;
+  border-radius: 50%;
+  color: var(--gold);
+  font-size: 17px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 12px rgba(13,45,94,0.25);
+  transition: all 0.2s;
+}
+.send-btn:hover { transform: scale(1.08); }
+
+/* ── FEATURE CARDS ──────────────────────────────── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.feature-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  border-top: 4px solid var(--sky);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.feature-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.feature-icon { font-size: 1.8rem; margin-bottom: 10px; }
+.feature-card h3 { color: var(--navy); font-size: 0.92rem; font-weight: 800; margin-bottom: 6px; }
+.feature-card p { color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+.feature-tag {
+  display: inline-block;
+  background: var(--light-blue);
+  color: var(--blue);
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+/* ── COMPARISON TABLE ───────────────────────────── */
+.compare-table {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+.compare-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 400px;
+}
+.compare-table th {
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
+}
+.compare-table th:first-child { text-align: left; }
+.compare-table th.old { background: #ffebee; color: #c0392b; }
+.compare-table th.new { background: var(--navy); color: #fbbf24; }
+.compare-table th.feature { background: var(--light-blue); color: var(--navy); }
+.compare-table td {
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  border-bottom: 1px solid #e3f2fd;
+  text-align: center;
+  vertical-align: middle;
+}
+.compare-table td:first-child { text-align: left; font-weight: 700; color: var(--navy); }
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table tr:nth-child(even) td { background: #f7fbff; }
+.tick { color: #2e7d32; font-size: 1.1rem; }
+.cross { color: #c0392b; font-size: 1.1rem; }
+
+/* ── DISCOUNT CARDS ─────────────────────────────── */
+.discount-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.discount-card {
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  border-radius: 16px;
+  padding: 18px 14px;
+  text-align: center;
+  color: white;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s;
+}
+.discount-card:hover { transform: translateY(-3px); }
+.discount-pct {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fbbf24;
+  line-height: 1;
+}
+.discount-label { font-size: 0.75rem; font-weight: 700; opacity: 0.9; margin-top: 4px; }
+.discount-note { font-size: 0.68rem; opacity: 0.65; margin-top: 4px; }
+
+/* ── URGENCY SECTION ────────────────────────────── */
+.urgency-section {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b, #b91c1c);
+  border-radius: 20px;
+  padding: 24px 20px;
+  text-align: center;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(192,57,43,0.3);
+  position: relative;
+  overflow: hidden;
+}
+.urgency-section::before {
+  content:'⚠️';
+  position:absolute; top:-10px; right:16px;
+  font-size: 80px;
+  opacity: 0.08;
+}
+.urgency-section h2 {
+  font-family: 'Playfair Display', serif;
+  color: #fff;
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  margin-bottom: 10px;
+}
+.urgency-section p { color: rgba(255,255,255,0.85); font-size: 0.88rem; line-height: 1.6; margin-bottom: 6px; }
+.urgency-section strong { color: #fbbf24; }
+.urgency-points {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 16px 0;
+}
+.urgency-point {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  padding: 8px 14px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* ── ADVISOR CARD ───────────────────────────────── */
+.advisor-card {
+  background: linear-gradient(135deg, var(--navy), #1565c0);
+  border-radius: 20px;
+  padding: 24px 20px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-lg);
+}
+.advisor-logo {
+  width: 72px; height: 72px;
+  border-radius: 14px;
+  background: white;
+  padding: 4px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.advisor-info { flex: 1; min-width: 200px; }
+.advisor-name {
+  font-family: 'Playfair Display', serif;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.advisor-role { color: rgba(255,255,255,0.75); font-size: 0.78rem; line-height: 1.5; margin-bottom: 10px; }
+.advisor-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.advisor-badge {
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.4);
+  color: #fbbf24;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.advisor-contact { text-align: center; }
+.call-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gold);
+  color: var(--navy);
+  border-radius: 28px;
+  padding: 13px 22px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 900;
+  text-decoration: none;
+  box-shadow: 0 4px 18px rgba(245,158,11,0.4);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.call-btn:hover { transform: scale(1.05); }
+.call-sub { color: rgba(255,255,255,0.6); font-size: 0.7rem; margin-top: 6px; }
+
+/* ── FOOTER ─────────────────────────────────────── */
+.footer {
+  background: var(--navy);
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  padding: 20px 16px;
+  font-size: 0.72rem;
+  line-height: 1.7;
+}
+.footer strong { color: rgba(255,255,255,0.8); }
+
+/* ── FLOATING CTA ───────────────────────────────── */
+.floating-cta {
+  position: fixed;
+  bottom: 20px;
+  right: 16px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.float-btn {
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+}
+.float-btn:hover { transform: scale(1.1); }
+.float-wa { background: #25d366; }
+.float-call { background: var(--gold); }
+
+/* ── RESPONSIVE ─────────────────────────────────── */
+@media (max-width: 600px) {
+  .hero-stats { gap: 8px; }
+  .stat-chip { min-width: 80px; padding: 8px 10px; }
+  .stat-chip .num { font-size: 0.95rem; }
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  .discount-grid { grid-template-columns: 1fr 1fr; }
+  .advisor-card { flex-direction: column; text-align: center; }
+  .advisor-badges { justify-content: center; }
+}
+@media (max-width: 380px) {
+  .features-grid { grid-template-columns: 1fr; }
+  .discount-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.send-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.bubble a { color: var(--blue); font-weight: 800; text-decoration: underline; }
+.msg.user .bubble a { color: #fff; }
+@media (max-width: 600px) {
+  .chat-messages { max-height: 56vh; }
+  .input-row { position: sticky; bottom: 0; z-index: 20; }
+  .bubble { max-width: 88%; font-size: 0.84rem; }
+  .chips-area { padding-left: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <img src="data:image/webp;base64,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" class="logo-img" alt="{{brand_name}} logo">
+    <div class="header-text">
+      <div class="header-brand">{{brand_name}}</div>
+      <div class="header-tagline">{{tagline}}</div>
+    </div>
+    <a href="tel:{{advisor_mobile}}" class="header-call">📞 Call Us</a>
+  </div>
+</header>
+
+<!-- URGENCY TICKER -->
+<div class="urgency-banner">
+  ⚠️ &nbsp; Medical inflation is 15–20% per year! Your old health policy may leave you UNDERINSURED. Port to TATA AIG MediCare Select TODAY! &nbsp; ⚠️
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">🚨 Urgent Health Insurance Alert</div>
+  <h1>Is Your Old Health Policy<br><span>Putting You at Risk?</span></h1>
+  <p class="hero-sub">Robotic surgeries, ICU bills, and rising hospital costs are making low sum insured policies almost useless. It is time to upgrade — NOW.</p>
+  <div class="hero-urgent">
+    <strong>⚠️ Did you know?</strong> A single robotic surgery today costs ₹5–12 Lakhs. A 5-day ICU stay can cost ₹3–8 Lakhs. If your health policy is below ₹10 Lakhs — you are practically <strong>uninsured!</strong>
+  </div>
+  <div class="hero-stats">
+    <div class="stat-chip"><span class="num">₹3 Cr</span><span class="lbl">Max Cover</span></div>
+    <div class="stat-chip"><span class="num">♾️</span><span class="lbl">Unlimited Restore</span></div>
+    <div class="stat-chip"><span class="num">20%</span><span class="lbl">Inception Discount</span></div>
+    <div class="stat-chip"><span class="num">0 days</span><span class="lbl">Min Entry Age</span></div>
+    <div class="stat-chip"><span class="num">25yrs+</span><span class="lbl">Our Experience</span></div>
+  </div>
+  <div class="hero-cta">
+    <a href="#chat" class="btn-primary">💬 Chat with Shreya</a>
+    <a href="tel:{{advisor_mobile}}" class="btn-secondary">📞 {{advisor_mobile}}</a>
+  </div>
+</section>
+
+<!-- MAIN CONTENT -->
+<div class="chat-wrapper">
+
+  <!-- SECTION: Chat -->
+  <div class="section-title" id="chat">
+    <h2>Ask Shreya Anything! 😄</h2>
+    <p>Your friendly {{brand_name}} AI assistant — available 24/7</p>
+    <div class="section-divider"></div>
+  </div>
+
+  <!-- CHAT BOX -->
+  <div class="chat-box">
+    <div class="chat-header-bar">
+      <div class="bot-avatar">🌟</div>
+      <div class="bot-info">
+        <div class="name">Shreya — {{brand_name}} Assistant</div>
+        <div class="status"><span class="online-dot"></span> Online — Ready to help you! 😊</div>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="typing hidden" id="typing">
+      <div class="msg-av">🌟</div>
+      <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+    <div class="chips-area" id="chips-area"></div>
+
+    <div class="input-row">
+      <input type="text" class="msg-input" id="msg-input" placeholder="Type your question here..." autocomplete="off">
+      <button class="send-btn" id="send-btn">➤</button>
+    </div>
+  </div>
+
+  <!-- KEY FEATURES -->
+  <div class="section-title">
+    <h2>Why TATA AIG MediCare Select?</h2>
+    <p>Features that your old policy probably does NOT have!</p>
+    <div class="section-divider"></div>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">♾️</div>
+      <h3>Restore Infinity Plus</h3>
+      <p>Sum insured restores UNLIMITED times in the same policy year. Never run out of coverage!</p>
+      <span class="feature-tag">⭐ Unique Feature</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💎</div>
+      <h3>Infinite Advantage</h3>
+      <p>ONE lifetime claim with absolutely NO limit on sum insured. Complete financial protection!</p>
+      <span class="feature-tag">🔥 Game Changer</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>Robotic Surgery Covered</h3>
+      <p>Covers modern surgical procedures including robotic surgeries costing ₹5–12 Lakhs!</p>
+      <span class="feature-tag">🏥 Future Ready</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛏️</div>
+      <h3>No Room Rent Capping</h3>
+      <p>Single Private Room with no capping. Optional upgrade to ANY room in ANY hospital!</p>
+      <span class="feature-tag">✅ No Hidden Limits</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">👶</div>
+      <h3>Maternity Care</h3>
+      <p>Covers delivery, complications and first-year vaccinations for newborn. Up to ₹1 Lakh/year!</p>
+      <span class="feature-tag">👨‍👩‍👧 Family First</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💊</div>
+      <h3>Consumables Covered</h3>
+      <p>Gloves, syringes, PPE kits — all those "small charges" that add up to thousands. Covered!</p>
+      <span class="feature-tag">💰 No Surprise Bills</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌿</div>
+      <h3>AYUSH Benefit</h3>
+      <p>Ayurveda, Yoga, Unani, Siddha, Homeopathy — all traditional treatments fully covered!</p>
+      <span class="feature-tag">🙏 Holistic Care</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏠</div>
+      <h3>Domiciliary Treatment</h3>
+      <p>Treated at home due to medical conditions? Still covered up to full sum insured!</p>
+      <span class="feature-tag">🏡 Home = Hospital</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <h3>Mental Wellbeing Rider</h3>
+      <p>Therapy, stress management, psychological support — mental health matters too!</p>
+      <span class="feature-tag">💙 Mind + Body</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">👩</div>
+      <h3>EmpowerHer — Women's Health</h3>
+      <p>PCOD, cancer screening, gynaecologist visits, vaccinations — complete women's care!</p>
+      <span class="feature-tag">🌸 For Every Woman</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🩺</div>
+      <h3>Annual Health Checkup</h3>
+      <p>Cashless health checkups at HOME or at partner locations every year — stay proactive!</p>
+      <span class="feature-tag">🏆 Prevention First</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📋</div>
+      <h3>OPD + Dental + Vision</h3>
+      <p>Doctor consultations, dental, eye care and teleconsultations — all in one plan!</p>
+      <span class="feature-tag">👁️ Complete Cover</span>
+    </div>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="section-title">
+    <h2>Old Policy vs TATA AIG MediCare Select</h2>
+    <p>See exactly what you are MISSING with your current insurer!</p>
+    <div class="section-divider"></div>
+  </div>
+
+  <div class="compare-table">
+    <table>
+      <tr>
+        <th class="feature">Feature</th>
+        <th class="old">❌ Old Policy</th>
+        <th class="new">✅ TATA AIG Select</th>
+      </tr>
+      <tr>
+        <td>Sum Insured Restoration</td>
+        <td><span class="cross">Once or Nil</span></td>
+        <td><span class="tick">♾️ Unlimited</span></td>
+      </tr>
+      <tr>
+        <td>Room Rent Capping</td>
+        <td><span class="cross">Yes — Restricted</span></td>
+        <td><span class="tick">No Capping at all</span></td>
+      </tr>
+      <tr>
+        <td>Robotic Surgery</td>
+        <td><span class="cross">Mostly Not Covered</span></td>
+        <td><span class="tick">Covered!</span></td>
+      </tr>
+      <tr>
+        <td>Consumables Benefit</td>
+        <td><span class="cross">Not Covered</span></td>
+        <td><span class="tick">Covered up to SI</span></td>
+      </tr>
+      <tr>
+        <td>Max Coverage Available</td>
+        <td><span class="cross">₹5L–₹15L only</span></td>
+        <td><span class="tick">Up to ₹3 CRORE!</span></td>
+      </tr>
+      <tr>
+        <td>Maternity + Newborn</td>
+        <td><span class="cross">Limited or Nil</span></td>
+        <td><span class="tick">Up to ₹1 Lakh</span></td>
+      </tr>
+      <tr>
+        <td>Mental Health Cover</td>
+        <td><span class="cross">Rarely Covered</span></td>
+        <td><span class="tick">Full Rider Available</span></td>
+      </tr>
+      <tr>
+        <td>AYUSH Treatment</td>
+        <td><span class="cross">Not Covered</span></td>
+        <td><span class="tick">Covered up to SI</span></td>
+      </tr>
+      <tr>
+        <td>Annual Health Checkup</td>
+        <td><span class="cross">Not Available</span></td>
+        <td><span class="tick">Cashless at Home!</span></td>
+      </tr>
+      <tr>
+        <td>Pre-existing Wait (with Rider)</td>
+        <td><span class="cross">36 Months</span></td>
+        <td><span class="tick">Just 30 Days!</span></td>
+      </tr>
+      <tr>
+        <td>Inception Discount</td>
+        <td><span class="cross">None</span></td>
+        <td><span class="tick">20% off immediately!</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- DISCOUNTS -->
+  <div class="section-title">
+    <h2>Massive Discounts — Save Big! 💰</h2>
+    <p>Stack multiple discounts and pay much less than you expect!</p>
+    <div class="section-divider"></div>
+  </div>
+
+  <div class="discount-grid">
+    <div class="discount-card">
+      <div class="discount-pct">20%</div>
+      <div class="discount-label">Favorable Experience Discount</div>
+      <div class="discount-note">At policy inception — right away!</div>
+    </div>
+    <div class="discount-card">
+      <div class="discount-pct">7.5%</div>
+      <div class="discount-label">Professional Discount</div>
+      <div class="discount-note">For salaried customers</div>
+    </div>
+    <div class="discount-card">
+      <div class="discount-pct">32%</div>
+      <div class="discount-label">Family Floater Discount</div>
+      <div class="discount-note">3+ members with 2 children</div>
+    </div>
+    <div class="discount-card">
+      <div class="discount-pct">10%</div>
+      <div class="discount-label">Young Family Discount</div>
+      <div class="discount-note">All members aged 40 or below</div>
+    </div>
+    <div class="discount-card">
+      <div class="discount-pct">7.5%</div>
+      <div class="discount-label">Long Term Discount</div>
+      <div class="discount-note">3-year single premium policy</div>
+    </div>
+    <div class="discount-card">
+      <div class="discount-pct">5%</div>
+      <div class="discount-label">Multi-Individual Discount</div>
+      <div class="discount-note">2+ members in one policy</div>
+    </div>
+  </div>
+
+  <!-- URGENCY SECTION -->
+  <div class="urgency-section">
+    <h2>⚠️ Wake Up Call — Don't Ignore This!</h2>
+    <p>Medical costs in India are rising <strong>15–20% every single year.</strong> What costs ₹5 Lakhs today will cost ₹15 Lakhs in just 6 years.</p>
+    <div class="urgency-points">
+      <div class="urgency-point">🤖 Robotic Surgery: ₹5–12 Lakhs</div>
+      <div class="urgency-point">🏥 ICU per day: ₹15,000–₹40,000</div>
+      <div class="urgency-point">🫀 Heart Surgery: ₹8–20 Lakhs</div>
+      <div class="urgency-point">🧠 Brain Surgery: ₹10–25 Lakhs</div>
+      <div class="urgency-point">🦷 Cancer Treatment: ₹10–50 Lakhs</div>
+      <div class="urgency-point">🩻 5-day Hospitalization: ₹3–8 Lakhs</div>
+    </div>
+    <p>If your health policy is <strong>₹3 Lakhs or ₹5 Lakhs</strong> — a single hospitalization can WIPE it out completely. You will be paying from your own savings!</p>
+    <p style="margin-top:10px;"><strong>Port your policy NOW before your renewal date. Apply at least 30 days before renewal — IRDA mandate!</strong></p>
+    <br>
+    <a href="tel:{{advisor_mobile}}" class="btn-primary" style="margin:0 auto; display:inline-flex;">📞 Call Now — {{advisor_mobile}}</a>
+  </div>
+
+  <!-- ADVISOR CARD -->
+  <div class="section-title">
+    <h2>Your Trusted Insurance Advisor</h2>
+    <p>25+ years of experience protecting families in Hubballi</p>
+    <div class="section-divider"></div>
+  </div>
+
+  <div class="advisor-card">
+    <img src="data:image/webp;base64,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" class="advisor-logo" alt="{{brand_name}}">
+    <div class="advisor-info">
+      <div class="advisor-name">{{advisor_name}}</div>
+      <div class="advisor-role">
+        {{advisor_role}}<br>
+        insurehubballi — {{office_address}}
+      </div>
+      <div class="advisor-badges">
+        <span class="advisor-badge">LIC of India</span>
+        <span class="advisor-badge">TATA AIA</span>
+        <span class="advisor-badge">TATA AIG</span>
+        <span class="advisor-badge">Manipal Cigna</span>
+      </div>
+    </div>
+    <div class="advisor-contact">
+      <a href="tel:{{advisor_mobile}}" class="call-btn">📞 {{advisor_mobile}}</a>
+      <div class="call-sub">Call or WhatsApp anytime</div>
+    </div>
+  </div>
+
+</div><!-- end chat-wrapper -->
+
+<!-- FOOTER -->
+<footer class="footer">
+  <strong>{{brand_name}}</strong> — {{tagline}}<br>
+  {{office_address}}<br>
+  📞 {{advisor_mobile}} | Advisor: {{advisor_name}} <br><br>
+  <em>TATA AIG MediCare Select UIN: TATHLIP25051V012425 | IRDA Reg: 108</em><br>
+  <em>Disclaimer: This is a summary only. Please read the policy wording carefully. Insurance is a subject matter of solicitation. T&C Apply.</em>
+</footer>
+
+<!-- FLOATING BUTTONS -->
+<div class="floating-cta">
+  <a href="https://wa.me/91{{advisor_mobile}}?text=Hi%20{{advisor_name}}%20sir%2C%20I%20am%20interested%20in%20TATA%20AIG%20MediCare%20Select.%20Please%20guide%20me!" class="float-btn float-wa" title="WhatsApp">💬</a>
+  <a href="tel:{{advisor_mobile}}" class="float-btn float-call" title="Call">📞</a>
+</div>
+
+<script>
+/*
+  Offline chatbot rebuilt for {{brand_name}}.
+  No API, no internet dependency, no CORS issue.
+*/
+const INITIAL_CHIPS = [
+  "What is MediCare Select? 🏥",
+  "I have an old policy — should I port?",
+  "What's Restore Infinity Plus? ♾️",
+  "Coverage up to how much?",
+  "What discounts am I eligible for?",
+  "Is robotic surgery covered? 🤖",
+  "How to port my policy?",
+  "I'm a fresher — first health policy"
+];
+
+const FOLLOWUP_CHIPS = [
+  "Is maternity covered? 👶",
+  "What riders are available?",
+  "Pre-existing disease waiting period?",
+  "How much will premium cost?",
+  "Is AYUSH covered? 🌿",
+  "OPD & dental coverage?",
+  "Contact details 📞",
+  "Women's health coverage? 👩"
+];
+
+const CONTACT_CHIPS = [
+  "WhatsApp Advisor 💬",
+  "Call now 📞",
+  "How to port my policy?",
+  "What documents are needed?"
+];
+
+let busy = false;
+let userTurns = 0;
+
+const messagesEl = document.getElementById("chat-messages");
+const chipsEl = document.getElementById("chips-area");
+const typingEl = document.getElementById("typing");
+const inputEl = document.getElementById("msg-input");
+const sendBtn = document.getElementById("send-btn");
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function addMsg(text, role = "bot") {
+  const wrap = document.createElement("div");
+  wrap.className = "msg " + role;
+  if (role === "bot") {
+    wrap.innerHTML = `<div class="msg-av">🌟</div><div class="bubble">${text}</div>`;
+  } else {
+    wrap.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+  }
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function showChips(arr) {
+  chipsEl.innerHTML = "";
+  arr.forEach(label => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip";
+    btn.textContent = label;
+    btn.onclick = () => handleMsg(label);
+    chipsEl.appendChild(btn);
+  });
+}
+
+function showTyping(show) {
+  typingEl.classList.toggle("hidden", !show);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function normalize(text) {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9₹\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function whatsappLink(message) {
+  return `https://wa.me/91{{advisor_mobile}}?text=${encodeURIComponent(message)}`;
+}
+
+const answers = [
+  {
+    keys: ["hi", "hello", "hey", "good morning", "namaskara", "namaste"],
+    reply: `Namaskara! 🙏 I am <strong>Shreya</strong> from <strong>{{brand_name}}</strong>. I can help you understand <strong>TATA AIG MediCare Select</strong>, porting, coverage, discounts and documents. Tell me what you want to know. 😊`,
+    chips: INITIAL_CHIPS
+  },
+  {
+    keys: ["what is medicare select", "medicare select", "about plan", "select plan"],
+    reply: `<strong>TATA AIG MediCare Select</strong> is a health insurance plan designed for stronger protection with modern benefits like high coverage options, restoration features, wellness benefits and useful add-ons. ✅<br><br>It is especially useful if your current cover feels small compared to today’s hospital costs. For exact eligibility, premium and terms, {{advisor_name}} sir can check your age, city, existing policy and medical history.`,
+    chips: ["Coverage up to how much?", "What's Restore Infinity Plus? ♾️", "What discounts am I eligible for?", "Contact details 📞"]
+  },
+  {
+    keys: ["old policy", "should i port", "port", "porting", "switch", "transfer"],
+    reply: `Yes, porting can be a smart option <strong>if your current policy has low cover, weak features, high premium, or poor benefits</strong>. 🛡️<br><br>In porting, you do not simply cancel your old policy. You shift to a better plan while trying to retain eligible continuity benefits as per insurer rules and policy terms.<br><br><strong>Important:</strong> Porting should usually be started before renewal, so do not wait till the last moment.`,
+    chips: ["How to port my policy?", "What documents are needed?", "Pre-existing disease waiting period?", "WhatsApp Advisor 💬"]
+  },
+  {
+    keys: ["restore infinity", "infinity", "restore", "recharge"],
+    reply: `<strong>Restore Infinity Plus</strong> means the sum insured can be restored again as per plan terms when it gets used for claims. ♾️<br><br>Simple meaning: if a big hospitalization consumes your cover, restoration can help bring back protection for future claims, subject to policy conditions.<br><br>This is very valuable because one serious hospitalization can disturb the entire family’s financial planning.`,
+    chips: ["Coverage up to how much?", "Is robotic surgery covered? 🤖", "How much will premium cost?", "Contact details 📞"]
+  },
+  {
+    keys: ["coverage", "cover", "sum insured", "how much", "unlimited", "lakhs", "crore"],
+    reply: `Coverage depends on the selected plan option, age, underwriting and premium. The key idea is to avoid being underinsured. 🚑<br><br>Today, a ₹3–5 lakh policy may feel safe, but one major surgery, ICU stay or robotic procedure can cross that amount quickly. Ideally, the family should review whether the cover is enough for modern hospital costs.`,
+    chips: ["I have an old policy — should I port?", "How much will premium cost?", "Is robotic surgery covered? 🤖", "WhatsApp Advisor 💬"]
+  },
+  {
+    keys: ["discount", "discounts", "eligible", "saving", "save", "offer"],
+    reply: `You may be eligible for discounts depending on age, family members, plan option, tenure, wellness and insurer rules. 🎁<br><br>Because discounts change by profile and policy conditions, the best way is to share your age, existing policy details and family members with {{advisor_name}} sir. He will check the suitable option properly.`,
+    chips: ["How much will premium cost?", "WhatsApp Advisor 💬", "Call now 📞", "What documents are needed?"]
+  },
+  {
+    keys: ["robotic", "robot", "surgery", "modern treatment"],
+    reply: `Robotic surgery and modern treatments are important to check because these costs can be very high. 🤖<br><br>MediCare Select may offer modern treatment related benefits as per policy wording and selected variant. Please verify the exact coverage, limits and conditions before buying.`,
+    chips: ["Coverage up to how much?", "How to port my policy?", "Contact details 📞", "WhatsApp Advisor 💬"]
+  },
+  {
+    keys: ["fresher", "first health policy", "new policy", "first policy", "no policy"],
+    reply: `Great decision! Buying health insurance early is one of the smartest financial moves. 🌱<br><br>When you buy early, premium may be more manageable and you start building waiting-period continuity. For a first policy, focus on adequate cover, room rent rules, restoration, claim process and future family needs.`,
+    chips: ["Coverage up to how much?", "How much will premium cost?", "Women's health coverage? 👩", "Contact details 📞"]
+  },
+  {
+    keys: ["maternity", "pregnancy", "baby", "new born", "newborn"],
+    reply: `Maternity and newborn benefits depend on plan variant, waiting period and policy terms. 👶<br><br>Please do not assume it is immediately covered. Before buying, check the exact waiting period, limits, eligibility and exclusions in the policy wording.`,
+    chips: ["Women's health coverage? 👩", "How much will premium cost?", "WhatsApp Advisor 💬", "Call now 📞"]
+  },
+  {
+    keys: ["rider", "riders", "add on", "addon", "add-on", "optional"],
+    reply: `Riders/add-ons can improve the policy depending on your need — for example OPD, wellness, additional protection or other plan-specific benefits. ✨<br><br>The right rider depends on whether you are buying for self, family, senior citizen parents, maternity planning or existing disease history.`,
+    chips: ["OPD & dental coverage?", "Pre-existing disease waiting period?", "How much will premium cost?", "Contact details 📞"]
+  },
+  {
+    keys: ["pre existing", "ped", "disease", "diabetes", "bp", "blood pressure", "thyroid", "waiting period"],
+    reply: `For pre-existing diseases like diabetes, BP, thyroid, heart history etc., coverage depends on underwriting, declarations, waiting period and policy terms. 🩺<br><br>Please disclose everything correctly. Hiding medical history can create claim problems later. {{advisor_name}} sir can guide you on the clean and safe process.`,
+    chips: ["How to port my policy?", "What documents are needed?", "WhatsApp Advisor 💬", "Call now 📞"]
+  },
+  {
+    keys: ["premium", "price", "cost", "rate", "quote", "how much premium"],
+    reply: `Premium depends on <strong>age, city, family members, sum insured, existing illness, selected variant and discounts</strong>. 💰<br><br>For accurate premium, send these details on WhatsApp:<br>1) Name<br>2) Age<br>3) City<br>4) Existing policy PDF, if any<br>5) Family members to cover`,
+    chips: ["WhatsApp Advisor 💬", "Call now 📞", "What discounts am I eligible for?", "How to port my policy?"]
+  },
+  {
+    keys: ["ayush", "ayurveda", "homeopathy", "unani", "siddha"],
+    reply: `AYUSH coverage usually refers to Ayurveda, Yoga/Naturopathy, Unani, Siddha and Homeopathy treatment, subject to policy terms and approved treatment setup. 🌿<br><br>Check the exact limits and conditions before finalizing the policy.`,
+    chips: ["OPD & dental coverage?", "Coverage up to how much?", "Contact details 📞", "WhatsApp Advisor 💬"]
+  },
+  {
+    keys: ["opd", "dental", "doctor consultation", "consultation"],
+    reply: `OPD and dental benefits depend on the selected plan/rider/variant and policy wording. 🦷<br><br>Some benefits may have sub-limits, waiting periods or usage conditions. Better to verify before purchase so expectations are clear.`,
+    chips: ["What riders are available?", "How much will premium cost?", "WhatsApp Advisor 💬", "Call now 📞"]
+  },
+  {
+    keys: ["women", "woman", "female", "girl", "ladies", "women's health"],
+    reply: `Women’s health coverage may include plan-specific benefits depending on selected option and terms. 👩<br><br>For women, it is important to check maternity, wellness, preventive checkups, room rent, restoration and family floater suitability.`,
+    chips: ["Is maternity covered? 👶", "How much will premium cost?", "Contact details 📞", "WhatsApp Advisor 💬"]
+  },
+  {
+    keys: ["document", "documents", "needed", "required", "policy pdf", "renewal notice"],
+    reply: `For porting or quotation, usually these details help: 📄<br><br>✅ Existing policy copy / renewal notice<br>✅ Age and DOB<br>✅ City / pincode<br>✅ Claim history, if any<br>✅ Medical history<br>✅ Family member details<br><br>Share these on WhatsApp and {{advisor_name}} sir will guide the next step.`,
+    chips: ["WhatsApp Advisor 💬", "Call now 📞", "How to port my policy?", "Pre-existing disease waiting period?"]
+  },
+  {
+    keys: ["contact", "phone", "mobile", "number", "address", "office", "advisor", "call", "whatsapp"],
+    reply: `Sure 😊<br><br><strong>{{advisor_name}}</strong><br>{{advisor_role}}<br><strong>{{brand_name}}</strong> — {{tagline}}<br>📍 {{office_address}}<br>📞 <a href="tel:{{advisor_mobile}}">{{advisor_mobile}}</a><br>💬 <a href="${whatsappLink("Hi {{advisor_name}} sir, I am interested in TATA AIG MediCare Select. Please guide me.")}" target="_blank" rel="noopener">Chat on WhatsApp</a>`,
+    chips: CONTACT_CHIPS
+  },
+  {
+    keys: ["whatsapp advisor", "whatsapp", "message"],
+    reply: `Click here to WhatsApp directly: 💬<br><br><a href="${whatsappLink("Hi {{advisor_name}} sir, I am interested in TATA AIG MediCare Select. Please guide me.")}" target="_blank" rel="noopener"><strong>Open WhatsApp Chat</strong></a>`,
+    chips: ["Call now 📞", "What documents are needed?", "How much will premium cost?", "I have an old policy — should I port?"]
+  },
+  {
+    keys: ["call now", "call"],
+    reply: `You can call directly here: 📞<br><br><a href="tel:{{advisor_mobile}}"><strong>Call {{advisor_mobile}}</strong></a><br><br>Advisor: <strong>{{advisor_name}}</strong>`,
+    chips: ["WhatsApp Advisor 💬", "What documents are needed?", "How to port my policy?", "Coverage up to how much?"]
+  }
+];
+
+function getReply(rawText) {
+  const text = normalize(rawText);
+
+  // Exact quick-action shortcuts first
+  if (text.includes("whatsapp advisor") || text === "whatsapp" || text.includes("open whatsapp")) {
+    return answers.find(a => a.keys.includes("whatsapp"));
+  }
+
+  let best = null;
+  let bestScore = 0;
+  for (const item of answers) {
+    let score = 0;
+    for (const key of item.keys) {
+      const k = normalize(key);
+      if (!k) continue;
+      if (text === k) score += 10;
+      else if (text.includes(k)) score += Math.max(3, k.split(" ").length);
+      else {
+        const words = k.split(" ").filter(w => w.length > 2);
+        const matched = words.filter(w => text.includes(w)).length;
+        if (matched) score += matched;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  }
+
+  if (best && bestScore >= 2) return best;
+
+  return {
+    reply: `I understood your question, but to avoid giving wrong insurance advice, I’ll keep it clear and safe. 😊<br><br>For exact answer, premium, eligibility or policy terms, please contact <strong>{{advisor_name}} sir</strong> directly.<br><br>📞 <a href="tel:{{advisor_mobile}}">{{advisor_mobile}}</a><br>💬 <a href="${whatsappLink("Hi {{advisor_name}} sir, I need guidance about TATA AIG MediCare Select.")}" target="_blank" rel="noopener">Ask on WhatsApp</a>`,
+    chips: ["What is MediCare Select? 🏥", "How to port my policy?", "How much will premium cost?", "Contact details 📞"]
+  };
+}
+
+async function handleMsg(text) {
+  const clean = String(text || "").trim();
+  if (!clean || busy) return;
+
+  busy = true;
+  userTurns += 1;
+  inputEl.value = "";
+  chipsEl.innerHTML = "";
+  sendBtn.disabled = true;
+  addMsg(clean, "user");
+  showTyping(true);
+
+  await wait(450 + Math.random() * 450);
+  const result = getReply(clean);
+
+  showTyping(false);
+  addMsg(result.reply, "bot");
+  showChips(result.chips || (userTurns > 2 ? FOLLOWUP_CHIPS : INITIAL_CHIPS));
+
+  sendBtn.disabled = false;
+  inputEl.focus();
+  busy = false;
+}
+
+sendBtn.addEventListener("click", () => handleMsg(inputEl.value));
+inputEl.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    handleMsg(inputEl.value);
+  }
+});
+
+// Welcome sequence
+(async function welcome() {
+  await wait(500);
+  showTyping(true);
+  await wait(900);
+  showTyping(false);
+  addMsg("Namaskara! 🙏✨ I am <strong>Shreya</strong> from <strong>{{brand_name}}</strong>. I can guide you about TATA AIG MediCare Select, porting, discounts and documents.", "bot");
+
+  await wait(450);
+  showTyping(true);
+  await wait(900);
+  showTyping(false);
+  addMsg("⚠️ Quick check — is your current health policy below ₹10 Lakhs? If yes, your family may be underinsured because medical costs are rising fast.", "bot");
+
+  await wait(350);
+  showTyping(true);
+  await wait(800);
+  showTyping(false);
+  addMsg("🌟 You can ask me anything below, or directly call/WhatsApp {{advisor_name}} sir for exact premium and eligibility.", "bot");
+  showChips(INITIAL_CHIPS);
+})();
+</script>
+</body>
+</html>

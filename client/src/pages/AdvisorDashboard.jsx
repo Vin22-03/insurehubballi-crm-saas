@@ -119,16 +119,21 @@ function AdvisorDashboard() {
   };
 
   const replaceTemplateVariables = (body) => {
-    if (!body) return "";
+  if (!body) return "";
 
-    return body
-      .replaceAll("{client_name}", form.clientName || "Client")
-      .replaceAll("{age}", form.age || "")
-      .replaceAll("{advisor_name}", user?.name || "Advisor")
-      .replaceAll("{advisor_mobile}", user?.phone || "")
-      .replaceAll("{company_name}", selectedCompany?.name || "")
-      .replaceAll("{template_title}", selectedTemplate?.title || "Plan");
-  };
+  const isTataAig =
+    selectedCompany?.code === "TATA_AIG" ||
+    selectedCompany?.name?.toLowerCase().includes("tata aig");
+
+  return body
+    .replaceAll("{client_name}", form.clientName || "Client")
+    .replaceAll("{age}", form.age || "")
+    .replaceAll("{advisor_name}", user?.name || "Advisor")
+    .replaceAll("{advisor_mobile}", user?.phone || "")
+    .replaceAll("{advisor_url}", "")
+    .replaceAll("{company_name}", selectedCompany?.name || "")
+    .replaceAll("{template_title}", selectedTemplate?.title || "Plan");
+};
 
   const handleTemplateSelection = (e) => {
     const value = e.target.value;
@@ -144,41 +149,65 @@ function AdvisorDashboard() {
   };
 
   const generateMessage = () => {
-    if (
-      !form.companyId ||
-      !form.clientName ||
-      !form.clientMobile ||
-      !form.age ||
-      !form.templateId
-    ) {
-      setErrorMsg("Please select company, fill client details, age, and template.");
-      return;
-    }
+  if (
+    !form.companyId ||
+    !form.clientName ||
+    !form.clientMobile ||
+    !form.age ||
+    !form.templateId
+  ) {
+    setErrorMsg("Please select company, fill client details, age, and template.");
+    return;
+  }
 
-    if (!selectedTemplate?.body) {
-      setErrorMsg("Selected template has no message body.");
-      return;
-    }
+  if (!selectedTemplate?.body) {
+    setErrorMsg("Selected template has no message body.");
+    return;
+  }
 
-const bodyWithVariables = replaceTemplateVariables(selectedTemplate.body);
+  const bodyWithVariables = replaceTemplateVariables(selectedTemplate.body);
 
-const finalMessage = `Dear *${form.clientName || "Client"}*,
+  const companyName =
+    selectedCompany?.name ||
+    selectedTemplate?.company?.name ||
+    "";
 
-Based on your age *${form.age}*, we are sharing a suitable plan for you:
+  const companyCode =
+    selectedCompany?.code ||
+    selectedTemplate?.company?.code ||
+    "";
+
+  const isTataAig =
+    companyName.toLowerCase().includes("tata aig") ||
+    companyCode.toLowerCase().includes("tata_aig") ||
+    companyCode.toLowerCase().includes("tata-aig");
+
+  const advisorPhone = String(user?.phone || "").replace(/\D/g, "");
+
+  const advisorChatflowUrl = advisorPhone
+    ? `${window.location.origin}/chatflow/${advisorPhone}`
+    : "";
+
+  const advisorUrlLine =
+  isTataAig && advisorChatflowUrl
+    ? `\n\n${advisorChatflowUrl}`
+    : "";
+
+  const finalMessage = `Dear *${form.clientName || "Client"}*,
 
 ${bodyWithVariables}
 
 For more details, please contact:
 *${user?.name || "Advisor"}*
-*${user?.phone || ""}*
+*${user?.phone || ""}*${advisorUrlLine}
 
 Team - insurehubballi  
 Your Cover, Our Care`;
 
-    setGeneratedMessage(finalMessage);
-    setSuccessMsg("Message generated successfully.");
-    setErrorMsg("");
-  };
+  setGeneratedMessage(finalMessage);
+  setSuccessMsg("Message generated successfully.");
+  setErrorMsg("");
+};
 
   const openWhatsApp = () => {
     if (!generatedMessage.trim()) {

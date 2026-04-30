@@ -1,4 +1,4 @@
-import prisma from "../config/prisma.js";
+import { db } from "../config/db.js";
 
 async function seedCompanies() {
   try {
@@ -10,14 +10,18 @@ async function seedCompanies() {
     ];
 
     for (const company of companies) {
-      const existing = await prisma.company.findUnique({
-        where: { code: company.code },
-      });
+      const [rows] = await db.query(
+        `SELECT id FROM Company WHERE code = ? LIMIT 1`,
+        [company.code]
+      );
 
-      if (!existing) {
-        await prisma.company.create({
-          data: company,
-        });
+      if (rows.length === 0) {
+        await db.query(
+          `INSERT INTO Company (code, name, isActive, createdAt, updatedAt)
+           VALUES (?, ?, 1, NOW(), NOW())`,
+          [company.code, company.name]
+        );
+
         console.log(`✅ Created: ${company.name}`);
       } else {
         console.log(`⚡ Already exists: ${company.name}`);
@@ -28,7 +32,8 @@ async function seedCompanies() {
   } catch (error) {
     console.error("❌ Error seeding companies:", error);
   } finally {
-    await prisma.$disconnect();
+    // close pool (important for scripts)
+    await db.end();
   }
 }
 

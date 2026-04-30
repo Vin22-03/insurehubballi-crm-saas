@@ -1,6 +1,154 @@
-import prisma from "../config/prisma.js";
+import { db } from "../config/db.js";
+
+const SOURCE_LABELS = {
+  DASHBOARD_PAGE: "Dashboard",
+  CONTACTS_PAGE: "Contacts",
+  LEADS_PAGE: "Leads",
+};
+
+function startOfDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfDay(date) {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function formatDateKey(date) {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function mapActivity(activity) {
+  return {
+    id: activity.id,
+    activityType: activity.activityType,
+    note: activity.note || "",
+    sourcePage: activity.sourcePage || null,
+    nextFollowUpAt: activity.nextFollowUpAt,
+    createdAt: activity.createdAt,
+    template: activity.template_id
+      ? {
+          id: activity.template_id,
+          title: activity.template_title,
+        }
+      : activity.template || null,
+  };
+}
+
+function getLatestUsefulActivity(activities = []) {
+  if (!activities.length) return null;
+
+  const sorted = [...activities].sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
+  return sorted[0] || null;
+}
+
+function mapLeadRow(lead) {
+  const activities = (lead.activities || []).map(mapActivity);
+
+  const sourceActivity =
+    [...activities].reverse().find((item) => item.sourcePage) || null;
+
+  const templateActivity =
+    [...activities].reverse().find((item) => item.template) || null;
+
+  const latestActivity = getLatestUsefulActivity(activities);
+
+  return {
+    id: lead.id,
+    name: lead.name,
+    phone: lead.phone,
+    age: lead.age,
+    city: lead.city,
+    status: lead.status,
+    remarks: lead.remarks || "",
+    nextFollowUp: lead.nextFollowUpAt,
+    company: lead.company_id
+      ? {
+          id: lead.company_id,
+          name: lead.company_name,
+          code: lead.company_code,
+        }
+      : lead.company || null,
+    source: sourceActivity?.sourcePage
+      ? SOURCE_LABELS[sourceActivity.sourcePage] || sourceActivity.sourcePage
+      : "Dashboard",
+    template: templateActivity?.template || null,
+    latestActivity: latestActivity
+      ? {
+          id: latestActivity.id,
+          activityType: latestActivity.activityType,
+          note: latestActivity.note,
+          createdAt: latestActivity.createdAt,
+        }
+      : null,
+    activityTimeline: activities
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 20),
+    createdAt: lead.createdAt,
+  };
+}
+
+async function attachActivitiesToLeads(leads) {
+  const leadIds = leads.map((lead) => lead.id);
+
+  if (leadIds.length === 0) return leads.map((lead) => ({ ...lead, activities: [] }));
+
+  const [activities] = await db.query(
+    `SELECT
+       la.*,
+       t.id AS template_id,
+       t.title AS template_title
+     FROM \`LeadActivity\` la
+     LEFT JOIN Template t ON t.id = la.templateId
+     WHERE la.leadId IN (?)
+     ORDER BY la.createdAt ASC`,
+    [leadIds]
+  );
+
+  const activitiesByLead = activities.reduce((acc, activity) => {
+    if (!acc[activity.leadId]) acc[activity.leadId] = [];
+    acc[activity.leadId].push(activity);
+    return acc;
+  }, {});
+
+  return leads.map((lead) => ({
+    ...lead,
+    activities: activitiesByLead[lead.id] || [],
+  }));
+}
+
+async function fetchLeadsWithCompany(whereSql, params, orderSql = "ORDER BY l.createdAt DESC", limitSql = "") {
+  const [leads] = await db.query(
+    `SELECT
+       l.*,
+       c.id AS company_id,
+       c.code AS company_code,
+       c.name AS company_name
+     FROM \`Lead\` l
+     LEFT JOIN \`Company\` c ON c.id = l.companyId
+     ${whereSql}
+     ${orderSql}
+     ${limitSql}`,
+    params
+  );
+
+  return attachActivitiesToLeads(leads);
+}
 
 export const createLead = async (req, res) => {
+  const connection = await db.getConnection();
+
   try {
     const {
       name,
@@ -33,9 +181,9 @@ export const createLead = async (req, res) => {
         : null;
 
     const numericTemplateId =
-    templateId !== undefined && templateId !== null && templateId !== ""
-      ? Number(templateId)
-      : null;
+      templateId !== undefined && templateId !== null && templateId !== ""
+        ? Number(templateId)
+        : null;
 
     let finalAssignedToId = req.user.id;
 
@@ -49,16 +197,12 @@ export const createLead = async (req, res) => {
     }
 
     if (req.user.role === "ADVISOR") {
-      const advisor = await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: {
-          advisorCompanies: {
-            select: { companyId: true },
-          },
-        },
-      });
+      const [allowedRows] = await connection.query(
+        `SELECT companyId FROM AdvisorCompany WHERE advisorId = ?`,
+        [req.user.id]
+      );
 
-      const allowedCompanyIds = advisor.advisorCompanies.map((item) => item.companyId);
+      const allowedCompanyIds = allowedRows.map((item) => item.companyId);
 
       if (numericCompanyId && !allowedCompanyIds.includes(numericCompanyId)) {
         return res.status(403).json({
@@ -67,60 +211,93 @@ export const createLead = async (req, res) => {
       }
     }
 
-    const lead = await prisma.lead.create({
-      data: {
+    await connection.beginTransaction();
+
+    const [leadResult] = await connection.query(
+  `INSERT INTO \`Lead\`
+   (name, phone, altPhone, age, city, companyId, remarks, nextFollowUpAt, contactId, createdById, assignedToId, createdAt, updatedAt)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [
         name,
         phone,
-        altPhone: altPhone || null,
-        age: age !== undefined && age !== null && age !== "" ? Number(age) : null,
-        city: city || null,
-        companyId: numericCompanyId,
-        remarks: remarks || null,
-        nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt) : null,
-        contactId: numericContactId,
-        createdById: req.user.id,
-        assignedToId: finalAssignedToId,
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-          },
-        },
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            role: true,
-          },
-        },
-      },
-    });
+        altPhone || null,
+        age !== undefined && age !== null && age !== "" ? Number(age) : null,
+        city || null,
+        numericCompanyId,
+        remarks || null,
+        nextFollowUpAt ? new Date(nextFollowUpAt) : null,
+        numericContactId,
+        req.user.id,
+        finalAssignedToId,
+      ]
+    );
 
-    await prisma.leadActivity.create({
-      data: {
-        leadId: lead.id,
-        contactId: numericContactId,
-        advisorId: finalAssignedToId,
-        companyId: numericCompanyId,
-        templateId: numericTemplateId,
-        activityType: "LEAD_CREATED",
-        sourcePage: "DASHBOARD_PAGE",
-        note: remarks || "Lead created",
-        nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt) : null,
-      },
-    });
+    const leadId = leadResult.insertId;
+
+  await connection.query(
+  `INSERT INTO \`LeadActivity\`
+   (leadId, contactId, advisorId, companyId, templateId, activityType, sourcePage, note, nextFollowUpAt, createdAt)
+   VALUES (?, ?, ?, ?, ?, 'LEAD_CREATED', 'DASHBOARD_PAGE', ?, ?, NOW())`,
+  [
+    leadId,
+    numericContactId,
+    finalAssignedToId,
+    numericCompanyId,
+    numericTemplateId,
+    remarks || "Lead created",
+    nextFollowUpAt ? new Date(nextFollowUpAt) : null,
+  ]
+);
+
+    await connection.commit();
+
+    const [leadRows] = await db.query(
+      `SELECT
+         l.*,
+         c.id AS company_id,
+         c.code AS company_code,
+         c.name AS company_name,
+         u.id AS assigned_id,
+         u.name AS assigned_name,
+         u.phone AS assigned_phone,
+         u.role AS assigned_role
+       FROM \`Lead\` l
+       LEFT JOIN \`Company\` c ON c.id = l.companyId
+       LEFT JOIN \`User\` u ON u.id = l.assignedToId
+       WHERE l.id = ?
+       LIMIT 1`,
+      [leadId]
+    );
+
+    const lead = leadRows[0];
 
     return res.status(201).json({
       message: "Lead created successfully.",
-      lead,
+      lead: {
+        ...lead,
+        company: lead.company_id
+          ? {
+              id: lead.company_id,
+              code: lead.company_code,
+              name: lead.company_name,
+            }
+          : null,
+        assignedTo: lead.assigned_id
+          ? {
+              id: lead.assigned_id,
+              name: lead.assigned_name,
+              phone: lead.assigned_phone,
+              role: lead.assigned_role,
+            }
+          : null,
+      },
     });
   } catch (error) {
+    await connection.rollback();
     console.error("createLead error:", error);
     return res.status(500).json({ message: "Server error." });
+  } finally {
+    connection.release();
   }
 };
 
@@ -128,56 +305,84 @@ export const getLeads = async (req, res) => {
   try {
     const { search, status, companyId } = req.query;
 
-    const whereClause = {
-      ...(req.user.role === "ADMIN" ? {} : { assignedToId: req.user.id }),
-      ...(status ? { status } : {}),
-      ...(companyId ? { companyId: Number(companyId) } : {}),
-      ...(search
-        ? {
-            OR: [
-              { name: { contains: search } },
-              { phone: { contains: search } },
-              { city: { contains: search } },
-            ],
-          }
-        : {}),
-    };
+    const whereParts = [];
+    const params = [];
 
-    const leads = await prisma.lead.findMany({
-      where: whereClause,
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-          },
-        },
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            role: true,
-          },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            role: true,
-          },
-        },
-      },
-    });
+    if (req.user.role !== "ADMIN") {
+      whereParts.push("l.assignedToId = ?");
+      params.push(req.user.id);
+    }
+
+    if (status) {
+      whereParts.push("l.status = ?");
+      params.push(status);
+    }
+
+    if (companyId) {
+      whereParts.push("l.companyId = ?");
+      params.push(Number(companyId));
+    }
+
+    if (search) {
+      whereParts.push("(l.name LIKE ? OR l.phone LIKE ? OR l.city LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    const whereSql = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
+
+    const [leads] = await db.query(
+      `SELECT
+         l.*,
+         c.id AS company_id,
+         c.code AS company_code,
+         c.name AS company_name,
+         assigned.id AS assigned_id,
+         assigned.name AS assigned_name,
+         assigned.phone AS assigned_phone,
+         assigned.role AS assigned_role,
+         creator.id AS creator_id,
+         creator.name AS creator_name,
+         creator.phone AS creator_phone,
+         creator.role AS creator_role
+       FROM \`Lead\` l
+       LEFT JOIN \`Company\` c ON c.id = l.companyId
+       LEFT JOIN \`User\` assigned ON assigned.id = l.assignedToId
+       LEFT JOIN \`User\` creator ON creator.id = l.createdById
+       ${whereSql}
+       ORDER BY l.createdAt DESC`,
+      params
+    );
+
+    const formattedLeads = leads.map((lead) => ({
+      ...lead,
+      company: lead.company_id
+        ? {
+            id: lead.company_id,
+            code: lead.company_code,
+            name: lead.company_name,
+          }
+        : null,
+      assignedTo: lead.assigned_id
+        ? {
+            id: lead.assigned_id,
+            name: lead.assigned_name,
+            phone: lead.assigned_phone,
+            role: lead.assigned_role,
+          }
+        : null,
+      createdBy: lead.creator_id
+        ? {
+            id: lead.creator_id,
+            name: lead.creator_name,
+            phone: lead.creator_phone,
+            role: lead.creator_role,
+          }
+        : null,
+    }));
 
     return res.status(200).json({
       message: "Leads fetched successfully.",
-      leads,
+      leads: formattedLeads,
     });
   } catch (error) {
     console.error("getLeads error:", error);
@@ -204,14 +409,15 @@ export const addLeadActivity = async (req, res) => {
       });
     }
 
-    const lead = await prisma.lead.findUnique({
-      where: { id: Number(leadId) },
-      select: {
-        id: true,
-        assignedToId: true,
-        companyId: true,
-      },
-    });
+    const [leadRows] = await db.query(
+      `SELECT id, assignedToId, companyId
+       FROM \`Lead\`
+       WHERE id = ?
+       LIMIT 1`,
+      [Number(leadId)]
+    );
+
+    const lead = leadRows[0];
 
     if (!lead) {
       return res.status(404).json({ message: "Lead not found." });
@@ -223,58 +429,90 @@ export const addLeadActivity = async (req, res) => {
       });
     }
 
-    const activity = await prisma.leadActivity.create({
-      data: {
-        leadId: Number(leadId),
-        contactId:
-          contactId !== undefined && contactId !== null && contactId !== ""
-            ? Number(contactId)
-            : null,
-        advisorId: req.user.role === "ADMIN" ? lead.assignedToId : req.user.id,
-        companyId:
-          companyId !== undefined && companyId !== null && companyId !== ""
-            ? Number(companyId)
-            : lead.companyId,
-        templateId:
-          templateId !== undefined && templateId !== null && templateId !== ""
-            ? Number(templateId)
-            : null,
+    const numericCompanyId =
+      companyId !== undefined && companyId !== null && companyId !== ""
+        ? Number(companyId)
+        : lead.companyId;
+
+    const numericTemplateId =
+      templateId !== undefined && templateId !== null && templateId !== ""
+        ? Number(templateId)
+        : null;
+
+    const numericContactId =
+      contactId !== undefined && contactId !== null && contactId !== ""
+        ? Number(contactId)
+        : null;
+
+    const [result] = await db.query(
+      `INSERT INTO  \`LeadActivity\`
+       (leadId, contactId, advisorId, companyId, templateId, activityType, sourcePage, note, nextFollowUpAt, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        Number(leadId),
+        numericContactId,
+        req.user.role === "ADMIN" ? lead.assignedToId : req.user.id,
+        numericCompanyId,
+        numericTemplateId,
         activityType,
         sourcePage,
-        note: note || null,
-        nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt) : null,
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-          },
-        },
-        template: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
-    });
+        note || null,
+        nextFollowUpAt ? new Date(nextFollowUpAt) : null,
+      ]
+    );
 
     if (note || nextFollowUpAt) {
-      await prisma.lead.update({
-        where: { id: Number(leadId) },
-        data: {
-          remarks: note || undefined,
-          nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt) : undefined,
-          status: "FOLLOW_UP",
-        },
-      });
+      await db.query(
+        `UPDATE \`Lead\`
+         SET remarks = COALESCE(?, remarks),
+             nextFollowUpAt = COALESCE(?, nextFollowUpAt),
+             status = 'FOLLOW_UP',
+             updatedAt = NOW()
+         WHERE id = ?`,
+        [
+          note || null,
+          nextFollowUpAt ? new Date(nextFollowUpAt) : null,
+          Number(leadId),
+        ]
+      );
     }
+
+    const [activityRows] = await db.query(
+      `SELECT
+         la.*,
+         c.id AS company_id,
+         c.code AS company_code,
+         c.name AS company_name,
+         t.id AS template_id,
+         t.title AS template_title
+       FROM \`LeadActivity\` la
+       LEFT JOIN \`Company\` c ON c.id = la.companyId
+       LEFT JOIN Template t ON t.id = la.templateId
+       WHERE la.id = ?
+       LIMIT 1`,
+      [result.insertId]
+    );
+
+    const activity = activityRows[0];
 
     return res.status(201).json({
       message: "Lead activity added successfully.",
-      activity,
+      activity: {
+        ...activity,
+        company: activity.company_id
+          ? {
+              id: activity.company_id,
+              code: activity.company_code,
+              name: activity.company_name,
+            }
+          : null,
+        template: activity.template_id
+          ? {
+              id: activity.template_id,
+              title: activity.template_title,
+            }
+          : null,
+      },
     });
   } catch (error) {
     console.error("addLeadActivity error:", error);
@@ -286,13 +524,15 @@ export const getLeadActivities = async (req, res) => {
   try {
     const { leadId } = req.params;
 
-    const lead = await prisma.lead.findUnique({
-      where: { id: Number(leadId) },
-      select: {
-        id: true,
-        assignedToId: true,
-      },
-    });
+    const [leadRows] = await db.query(
+      `SELECT id, assignedToId
+       FROM \`Lead\`
+       WHERE id = ?
+       LIMIT 1`,
+      [Number(leadId)]
+    );
+
+    const lead = leadRows[0];
 
     if (!lead) {
       return res.status(404).json({ message: "Lead not found." });
@@ -304,33 +544,40 @@ export const getLeadActivities = async (req, res) => {
       });
     }
 
-    const activities = await prisma.leadActivity.findMany({
-      where: {
-        leadId: Number(leadId),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-          },
-        },
-        template: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
-    });
+    const [activities] = await db.query(
+      `SELECT
+         la.*,
+         c.id AS company_id,
+         c.code AS company_code,
+         c.name AS company_name,
+         t.id AS template_id,
+         t.title AS template_title
+       FROM \`LeadActivity\` la
+       LEFT JOIN \`Company\` c ON c.id = la.companyId
+       LEFT JOIN Template t ON t.id = la.templateId
+       WHERE la.leadId = ?
+       ORDER BY la.createdAt DESC`,
+      [Number(leadId)]
+    );
 
     return res.status(200).json({
       message: "Lead activities fetched successfully.",
-      activities,
+      activities: activities.map((activity) => ({
+        ...activity,
+        company: activity.company_id
+          ? {
+              id: activity.company_id,
+              code: activity.company_code,
+              name: activity.company_name,
+            }
+          : null,
+        template: activity.template_id
+          ? {
+              id: activity.template_id,
+              title: activity.template_title,
+            }
+          : null,
+      })),
     });
   } catch (error) {
     console.error("getLeadActivities error:", error);
@@ -338,120 +585,13 @@ export const getLeadActivities = async (req, res) => {
   }
 };
 
-const SOURCE_LABELS = {
-  DASHBOARD_PAGE: "Dashboard",
-  CONTACTS_PAGE: "Contacts",
-  LEADS_PAGE: "Leads",
-};
-
-function startOfDay(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfDay(date) {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
-}
-
-function formatDateKey(date) {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function mapLeadRow(lead) {
-  const activities = (lead.activities || []).map(mapActivity);
-
-  const sourceActivity =
-    [...activities]
-      .reverse()
-      .find((item) => item.sourcePage) || null;
-
-  const templateActivity =
-    [...activities]
-      .reverse()
-      .find((item) => item.template) || null;
-
-  const latestActivity = getLatestUsefulActivity(activities);
-
-  return {
-    id: lead.id,
-    name: lead.name,
-    phone: lead.phone,
-    age: lead.age,
-    city: lead.city,
-    status: lead.status,
-    remarks: lead.remarks || "",
-    nextFollowUp: lead.nextFollowUpAt,
-    company: lead.company
-      ? {
-          id: lead.company.id,
-          name: lead.company.name,
-          code: lead.company.code,
-        }
-      : null,
-    source: sourceActivity?.sourcePage
-      ? SOURCE_LABELS[sourceActivity.sourcePage] || sourceActivity.sourcePage
-      : "Dashboard",
-    template: templateActivity?.template
-      ? {
-          id: templateActivity.template.id,
-          title: templateActivity.template.title,
-        }
-      : null,
-    latestActivity: latestActivity
-      ? {
-          id: latestActivity.id,
-          activityType: latestActivity.activityType,
-          note: latestActivity.note,
-          createdAt: latestActivity.createdAt,
-        }
-      : null,
-    activityTimeline: activities
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 20),
-    createdAt: lead.createdAt,
-  };
-}
-function mapActivity(activity) {
-  return {
-    id: activity.id,
-    activityType: activity.activityType,
-    note: activity.note || "",
-    sourcePage: activity.sourcePage || null,
-    nextFollowUpAt: activity.nextFollowUpAt,
-    createdAt: activity.createdAt,
-    template: activity.template
-      ? {
-          id: activity.template.id,
-          title: activity.template.title,
-        }
-      : null,
-  };
-}
-
-function getLatestUsefulActivity(activities = []) {
-  if (!activities.length) return null;
-
-  const sorted = [...activities].sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-  );
-
-  return sorted[0] || null;
-}
-
 export const getMyLeads = async (req, res) => {
   try {
     const advisorId = req.user.id;
 
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
-    const skip = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
     const search = req.query.search?.trim() || "";
     const status =
@@ -481,150 +621,109 @@ export const getMyLeads = async (req, res) => {
     const monthStart = new Date(year, month, 1, 0, 0, 0, 0);
     const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-    const baseWhere = {
-      assignedToId: advisorId,
-      ...(status ? { status } : {}),
-      ...(search
-        ? {
-            OR: [
-              { name: { contains: search } },
-              { phone: { contains: search } },
-              { city: { contains: search } },
-              {
-                company: {
-                  name: { contains: search },
-                },
-              },
-            ],
-          }
-        : {}),
-    };
+    const whereParts = ["l.assignedToId = ?"];
+    const params = [advisorId];
 
-    const commonInclude = {
-      company: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
-        },
-      },
-      activities: {
-        orderBy: {
-          createdAt: "asc",
-        },
-        select: {
-          id: true,
-          activityType: true,
-          sourcePage: true,
-          note: true,
-          nextFollowUpAt: true,
-          createdAt: true,
-          template: {
-            select: {
-              id: true,
-              title: true,
-            },
-          },
-        },
-      },
-    };
+    if (status) {
+      whereParts.push("l.status = ?");
+      params.push(status);
+    }
+
+    if (search) {
+      whereParts.push("(l.name LIKE ? OR l.phone LIKE ? OR l.city LIKE ? OR c.name LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    const whereSql = `WHERE ${whereParts.join(" AND ")}`;
 
     const [
       leads,
-      total,
-      totalLeads,
-      todayFollowUps,
-      upcomingFollowUps,
-      convertedLeads,
+      countRows,
+      totalLeadsRows,
+      todayFollowRows,
+      upcomingFollowRows,
+      convertedRows,
       selectedDateLeadsRaw,
       upcomingRemindersRaw,
-      reminderMonthLeads,
+      reminderMonthRows,
     ] = await Promise.all([
-      prisma.lead.findMany({
-        where: baseWhere,
-        skip,
-        take: limit,
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-        include: commonInclude,
-      }),
+      fetchLeadsWithCompany(
+        whereSql,
+        [...params, limit, offset],
+        "ORDER BY l.updatedAt DESC, l.createdAt DESC",
+        "LIMIT ? OFFSET ?"
+      ),
 
-      prisma.lead.count({
-        where: baseWhere,
-      }),
+      db.query(
+        `SELECT COUNT(*) AS total
+         FROM \`Lead\` l
+         LEFT JOIN \`Company\` c ON c.id = l.companyId
+         ${whereSql}`,
+        params
+      ),
 
-      prisma.lead.count({
-        where: {
-          assignedToId: advisorId,
-        },
-      }),
+      db.query(
+        `SELECT COUNT(*) AS count FROM \`Lead\` WHERE assignedToId = ?`,
+        [advisorId]
+      ),
 
-      prisma.lead.count({
-        where: {
-          assignedToId: advisorId,
-          nextFollowUpAt: {
-            gte: startOfDay(now),
-            lte: endOfDay(now),
-          },
-        },
-      }),
+      db.query(
+        `SELECT COUNT(*) AS count
+         FROM \`Lead\`
+         WHERE assignedToId = ?
+         AND nextFollowUpAt >= ?
+         AND nextFollowUpAt <= ?`,
+        [advisorId, startOfDay(now), endOfDay(now)]
+      ),
 
-      prisma.lead.count({
-        where: {
-          assignedToId: advisorId,
-          nextFollowUpAt: {
-            gte: startOfDay(now),
-          },
-        },
-      }),
+      db.query(
+        `SELECT COUNT(*) AS count
+         FROM \`Lead\`
+         WHERE assignedToId = ?
+         AND nextFollowUpAt >= ?`,
+        [advisorId, startOfDay(now)]
+      ),
 
-      prisma.lead.count({
-        where: {
-          assignedToId: advisorId,
-          status: "CONVERTED",
-        },
-      }),
+      db.query(
+        `SELECT COUNT(*) AS count
+         FROM \`Lead\`
+         WHERE assignedToId = ?
+         AND status = 'CONVERTED'`,
+        [advisorId]
+      ),
 
-      prisma.lead.findMany({
-        where: {
-          assignedToId: advisorId,
-          nextFollowUpAt: {
-            gte: startOfDay(effectiveSelectedDate),
-            lte: endOfDay(effectiveSelectedDate),
-          },
-        },
-        orderBy: {
-          nextFollowUpAt: "asc",
-        },
-        include: commonInclude,
-      }),
+      fetchLeadsWithCompany(
+        `WHERE l.assignedToId = ?
+         AND l.nextFollowUpAt >= ?
+         AND l.nextFollowUpAt <= ?`,
+        [advisorId, startOfDay(effectiveSelectedDate), endOfDay(effectiveSelectedDate)],
+        "ORDER BY l.nextFollowUpAt ASC"
+      ),
 
-      prisma.lead.findMany({
-        where: {
-          assignedToId: advisorId,
-          nextFollowUpAt: {
-            gte: startOfDay(now),
-          },
-        },
-        take: 5,
-        orderBy: {
-          nextFollowUpAt: "asc",
-        },
-        include: commonInclude,
-      }),
+      fetchLeadsWithCompany(
+        `WHERE l.assignedToId = ?
+         AND l.nextFollowUpAt >= ?`,
+        [advisorId, startOfDay(now), 5],
+        "ORDER BY l.nextFollowUpAt ASC",
+        "LIMIT ?"
+      ),
 
-      prisma.lead.findMany({
-        where: {
-          assignedToId: advisorId,
-          nextFollowUpAt: {
-            gte: monthStart,
-            lte: monthEnd,
-          },
-        },
-        select: {
-          nextFollowUpAt: true,
-        },
-      }),
+      db.query(
+        `SELECT nextFollowUpAt
+         FROM \`Lead\`
+         WHERE assignedToId = ?
+         AND nextFollowUpAt >= ?
+         AND nextFollowUpAt <= ?`,
+        [advisorId, monthStart, monthEnd]
+      ),
     ]);
+
+    const total = countRows[0][0].total;
+    const totalLeads = totalLeadsRows[0][0].count;
+    const todayFollowUps = todayFollowRows[0][0].count;
+    const upcomingFollowUps = upcomingFollowRows[0][0].count;
+    const convertedLeads = convertedRows[0][0].count;
+    const reminderMonthLeads = reminderMonthRows[0];
 
     const reminderDates = [
       ...new Set(
@@ -687,13 +786,7 @@ export const createLeadActivity = async (req, res) => {
   try {
     const advisorId = req.user.id;
     const { leadId } = req.params;
-    const {
-      activityType,
-      note,
-      nextFollowUpAt,
-      sourcePage,
-      templateId,
-    } = req.body;
+    const { activityType, note, nextFollowUpAt, sourcePage, templateId } = req.body;
 
     if (!activityType) {
       return res.status(400).json({
@@ -701,17 +794,15 @@ export const createLeadActivity = async (req, res) => {
       });
     }
 
-    const lead = await prisma.lead.findFirst({
-      where: {
-        id: Number(leadId),
-        assignedToId: advisorId,
-      },
-      select: {
-        id: true,
-        companyId: true,
-        assignedToId: true,
-      },
-    });
+    const [leadRows] = await db.query(
+      `SELECT id, companyId, assignedToId
+       FROM \`Lead\`
+       WHERE id = ? AND assignedToId = ?
+       LIMIT 1`,
+      [Number(leadId), advisorId]
+    );
+
+    const lead = leadRows[0];
 
     if (!lead) {
       return res.status(404).json({
@@ -719,55 +810,91 @@ export const createLeadActivity = async (req, res) => {
       });
     }
 
-    const activity = await prisma.leadActivity.create({
-      data: {
-        leadId: lead.id,
-        advisorId,
-        companyId: lead.companyId,
-        templateId: templateId ? Number(templateId) : null,
-        activityType,
-        sourcePage: sourcePage || "LEADS_PAGE",
-        note: note || null,
-        nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt) : null,
-      },
-      include: {
-        template: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
-    });
+    const numericTemplateId = templateId ? Number(templateId) : null;
+
+    const [result] = await db.query(
+  `INSERT INTO \`LeadActivity\`
+   (leadId, advisorId, companyId, templateId, activityType, sourcePage, note, nextFollowUpAt, createdAt)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+  [
+    lead.id,
+    advisorId,
+    lead.companyId,
+    numericTemplateId,
+    activityType,
+    sourcePage || "LEADS_PAGE",
+    note || null,
+    nextFollowUpAt ? new Date(nextFollowUpAt) : null,
+  ]
+);
+
+    const [activityRows] = await db.query(
+      `SELECT
+         la.*,
+         t.id AS template_id,
+         t.title AS template_title
+       FROM \`LeadActivity\` la
+       LEFT JOIN Template t ON t.id = la.templateId
+       WHERE la.id = ?
+       LIMIT 1`,
+      [result.insertId]
+    );
 
     return res.status(201).json({
       message: "Lead activity saved successfully.",
-      activity: mapActivity(activity),
+      activity: mapActivity(activityRows[0]),
     });
   } catch (error) {
     console.error("createLeadActivity error:", error);
     return res.status(500).json({ message: "Server error." });
   }
 };
+
 export const updateLead = async (req, res) => {
   try {
     const { leadId } = req.params;
     const { remarks, nextFollowUpAt, status } = req.body;
 
-    const updated = await prisma.lead.update({
-      where: { id: Number(leadId) },
-      data: {
-        ...(remarks !== undefined && { remarks }),
-        ...(nextFollowUpAt && {
-          nextFollowUpAt: new Date(nextFollowUpAt),
-        }),
-        ...(status && { status }),
-      },
-    });
+    const updateParts = [];
+    const params = [];
+
+    if (remarks !== undefined) {
+      updateParts.push("remarks = ?");
+      params.push(remarks);
+    }
+
+    if (nextFollowUpAt) {
+      updateParts.push("nextFollowUpAt = ?");
+      params.push(new Date(nextFollowUpAt));
+    }
+
+    if (status) {
+      updateParts.push("status = ?");
+      params.push(status);
+    }
+
+    if (updateParts.length === 0) {
+      return res.status(400).json({ message: "No update fields provided." });
+    }
+
+    updateParts.push("updatedAt = NOW()");
+    params.push(Number(leadId));
+
+    await db.query(
+      `UPDATE \`Lead\`
+       SET ${updateParts.join(", ")}
+       WHERE id = ?`,
+      params
+    );
+
+    const [updatedRows] = await db.query(
+      `SELECT * FROM \`Lead\` WHERE id = ? LIMIT 1`,
+      [Number(leadId)]
+    );
 
     return res.status(200).json({
       message: "Lead updated successfully",
-      lead: updated,
+      lead: updatedRows[0],
     });
   } catch (error) {
     console.error("updateLead error:", error);

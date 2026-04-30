@@ -19,6 +19,8 @@ function AdvisorImportContacts() {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [batchName, setBatchName] = useState("");
+const [importTags, setImportTags] = useState("");
 
   const handleFileChange = async (e) => {
     try {
@@ -92,15 +94,24 @@ function AdvisorImportContacts() {
         return;
       }
 
-      const payload = {
-        contacts: validRows.map((r) => ({
-          name: r.name || "Unnamed Contact",
-          phone: r.phone,
-          altPhone: r.altPhone || "",
-          city: r.city || "",
-          sourceNote: r.sourceNote || "",
-        })),
-      };
+      const normalizedImportTags = importTags
+  .split(",")
+  .map((tag) => tag.trim())
+  .filter(Boolean);
+
+const payload = {
+  batchName: batchName.trim() || fileName || "Imported Contacts",
+  tags: normalizedImportTags,
+
+  contacts: validRows.map((r) => ({
+    name: r.name || "Unnamed Contact",
+    phone: r.phone,
+    altPhone: r.altPhone || "",
+    city: r.city || "",
+    sourceNote: r.sourceNote || "",
+    tags: normalizedImportTags,
+  })),
+};
 
       const res = await API.post("/contacts/import", payload);
 
@@ -156,6 +167,36 @@ function AdvisorImportContacts() {
             ← Back to Contacts
           </button>
         </div>
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <div>
+    <label className="block text-sm font-semibold text-slate-700">
+      Batch Name
+    </label>
+    <input
+      type="text"
+      value={batchName}
+      onChange={(e) => setBatchName(e.target.value)}
+      placeholder="Example: LIC Hubli Leads April"
+      className="mt-3 w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-semibold text-slate-700">
+      Tags
+    </label>
+    <input
+      type="text"
+      value={importTags}
+      onChange={(e) => setImportTags(e.target.value)}
+      placeholder="Example: LIC, Hot, Health"
+      className="mt-3 w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+    />
+    <p className="mt-2 text-xs text-slate-500">
+      Separate tags using comma.
+    </p>
+  </div>
+</div>
 
         <div className="rounded-[24px] border border-dashed border-blue-200 bg-blue-50/40 p-5">
           <label className="block text-sm font-semibold text-slate-700">

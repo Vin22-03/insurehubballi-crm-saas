@@ -6,6 +6,7 @@ const initialForm = {
   name: "",
   phone: "",
   password: "",
+  advisorUrl: "",
   companyIds: [],
 };
 
@@ -155,6 +156,7 @@ function AdminAdvisors() {
         await API.patch(`/admin/advisors/${selectedAdvisor.id}`, {
           name: form.name.trim(),
           phone: form.phone.trim(),
+          advisorUrl: form.advisorUrl?.trim() || null,
           companyIds: form.companyIds,
         });
         setSuccessMsg("Advisor updated successfully.");

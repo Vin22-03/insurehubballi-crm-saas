@@ -9,22 +9,27 @@ import {
   deleteContact,
   bulkDeleteContacts,
   getContactBatches,
-  importContacts
+  importContacts,
+  renameContactBatch,
 } from "../controllers/contactController.js";
 
 const router = express.Router();
-
+// CONTACTS
 router.post("/", protect, createContact);
 router.get("/", protect, getContacts);
-
-router.get("/batches", protect, getContactBatches);
-router.post("/bulk-delete", protect, bulkDeleteContacts);
-
 router.patch("/:contactId", protect, updateContact);
 router.delete("/:contactId", protect, deleteContact);
 
+// BATCHES
+router.get("/batches", protect, getContactBatches);
+router.patch("/batches/:batchId/rename", protect, renameContactBatch);
+
+// BULK
+router.post("/bulk-delete", protect, bulkDeleteContacts);
+router.post("/import", protect, importContacts);
+
+// ACTIONS
 router.post("/:contactId/convert-to-lead", protect, convertContactToLead);
 router.post("/:contactId/activities", protect, addContactActivity);
-router.post("/import", protect, importContacts);
 
 export default router;

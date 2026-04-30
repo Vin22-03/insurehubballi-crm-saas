@@ -415,6 +415,31 @@ function AdvisorBrowseContacts() {
       );
     }
   };
+  const handleRenameBatch = async () => {
+  try {
+    if (batchFilter === "ALL") {
+      setErrorMsg("Please select a batch first.");
+      return;
+    }
+
+    const selectedBatch = batches.find((b) => b.batchId === batchFilter);
+    const oldName = selectedBatch?.batchName || selectedBatch?.batchId || "";
+
+    const newName = window.prompt("Enter new batch name:", oldName);
+
+    if (!newName || !newName.trim()) return;
+
+    await API.patch(`/contacts/batches/${batchFilter}/rename`, {
+      batchName: newName.trim(),
+    });
+
+    setSuccessMsg("Batch renamed successfully.");
+    await fetchContacts();
+  } catch (error) {
+    console.error("Failed to rename batch:", error);
+    setErrorMsg(error?.response?.data?.message || "Failed to rename batch.");
+  }
+};
 
   return (
     <AdvisorShell
@@ -527,11 +552,19 @@ function AdvisorBrowseContacts() {
           >
             <option value="ALL">All Batches</option>
             {batches.map((batch) => (
-              <option key={batch.batchId} value={batch.batchId}>
-                {batch.batchId}
-              </option>
-            ))}
+            <option key={batch.batchId} value={batch.batchId}>
+            {batch.batchName || batch.batchId}
+            </option>
+        ))}
           </select>
+          <button
+  type="button"
+  onClick={handleRenameBatch}
+  disabled={batchFilter === "ALL"}
+  className="mt-3 w-full rounded-2xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  Rename Batch
+</button>
         </div>
 
         <div className="rounded-[24px] border border-blue-100 bg-white/80 p-4 shadow-[0_12px_30px_rgba(37,99,235,0.05)]">
@@ -686,7 +719,7 @@ function AdvisorBrowseContacts() {
                     </td>
 
                     <td className="px-5 py-4 text-sm text-slate-700">
-                      {contact.importBatchId || "—"}
+                      {batches.find(b => b.batchId === contact.importBatchId)?.batchName || contact.importBatchId || "—"}
                     </td>
 
                     <td className="px-5 py-4">
@@ -845,7 +878,7 @@ function AdvisorBrowseContacts() {
                     Batch
                   </p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {contact.importBatchId || "—"}
+                    {batches.find(b => b.batchId === contact.importBatchId)?.batchName || contact.importBatchId || "—"}
                   </p>
                 </div>
 
@@ -998,9 +1031,11 @@ function AdvisorBrowseContacts() {
                 <ContactDetailBox label="Source">
                   {selectedContact.importSource === "EXCEL" ? "Imported" : "Manual"}
                 </ContactDetailBox>
-                <ContactDetailBox label="Batch ID">
-                  {selectedContact.importBatchId || "—"}
-                </ContactDetailBox>
+                <ContactDetailBox label="Batch">
+  {batches.find(b => b.batchId === selectedContact.importBatchId)?.batchName ||
+    selectedContact.importBatchId ||
+    "—"}
+</ContactDetailBox>
                 <ContactDetailBox label="Lead Status">
                   {selectedContact.hasLead ? "Lead Created" : "No Lead"}
                 </ContactDetailBox>

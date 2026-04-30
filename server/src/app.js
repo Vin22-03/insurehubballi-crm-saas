@@ -12,6 +12,9 @@ import contactRoutes from "./routes/contactRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
+import { db } from "./config/db.js";
+import chatflowRoutes from "./routes/chatflowRoutes.js";
+
 
 dotenv.config();
 
@@ -20,22 +23,36 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// IMPORTANT PATHS
 const uploadsPath = path.join(__dirname, "../uploads");
 const clientDistPath = path.join(__dirname, "../../client/dist");
 
 app.use(cors());
 app.use(express.json());
 
-// STATIC FILES
 app.use("/uploads", express.static(uploadsPath));
 
-// API HEALTH CHECK
 app.get("/api-health", (req, res) => {
   res.send("API is running 🚀");
 });
 
-// API ROUTES
+app.get("/db-test", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT 1 AS ok");
+
+    res.json({
+      success: true,
+      message: "mysql2 database connected successfully",
+      result: rows,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "mysql2 database connection failed",
+      error: error.message,
+    });
+  }
+});
+
 app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/templates", templateRoutes);
@@ -44,11 +61,10 @@ app.use("/contacts", contactRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/profile", profileRoutes);
 app.use("/resources", resourceRoutes);
+app.use("/chatflow", chatflowRoutes);
 
-// SERVE REACT BUILD
 app.use(express.static(clientDistPath));
 
-// REACT ROUTES FALLBACK
 app.get("/{*any}", (req, res) => {
   res.sendFile(path.join(clientDistPath, "index.html"));
 });

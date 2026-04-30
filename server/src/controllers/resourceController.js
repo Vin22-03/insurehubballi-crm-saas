@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import prisma from "../config/prisma.js";
+import { db } from "../config/db.js";
 
 const getFileTypeFromMime = (mimeType) => {
   if (mimeType === "application/pdf") return "PDF";
@@ -14,6 +14,33 @@ const getFileTypeFromMime = (mimeType) => {
   }
   return null;
 };
+
+const formatResource = (row) => ({
+  id: row.id,
+  title: row.title,
+  description: row.description,
+  fileUrl: row.fileUrl,
+  fileType: row.fileType,
+  category: row.category,
+  companyId: row.companyId,
+  isActive: Boolean(row.isActive),
+  uploadedById: row.uploadedById,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
+  company: row.company_id
+    ? {
+        id: row.company_id,
+        name: row.company_name,
+        code: row.company_code,
+      }
+    : null,
+  uploadedBy: row.uploadedBy_id
+    ? {
+        id: row.uploadedBy_id,
+        name: row.uploadedBy_name,
+      }
+    : undefined,
+});
 
 export const createResource = async (req, res) => {
   try {
@@ -49,37 +76,41 @@ export const createResource = async (req, res) => {
 
     fs.writeFileSync(filePath, req.file.buffer);
 
-    const resource = await prisma.resource.create({
-      data: {
-        title: title.trim(),
-        description: description?.trim() || null,
-        fileUrl: `/uploads/resources/${fileName}`,
+    const [result] = await db.query(
+      `INSERT INTO \`Resource\`
+       (title, description, fileUrl, fileType, category, companyId, isActive, uploadedById, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [
+        title.trim(),
+        description?.trim() || null,
+        `/uploads/resources/${fileName}`,
         fileType,
         category,
-        companyId: companyId ? Number(companyId) : null,
-        isActive: isActive === "false" ? false : true,
-        uploadedById: req.user.id,
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          },
-        },
-        uploadedBy: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+        companyId ? Number(companyId) : null,
+        isActive === "false" ? 0 : 1,
+        req.user.id,
+      ]
+    );
+
+    const [rows] = await db.query(
+      `SELECT
+         r.*,
+         c.id AS company_id,
+         c.name AS company_name,
+         c.code AS company_code,
+         u.id AS uploadedBy_id,
+         u.name AS uploadedBy_name
+       FROM \`Resource\` r
+       LEFT JOIN \`Company\` c ON c.id = r.companyId
+       LEFT JOIN \`User\` u ON u.id = r.uploadedById
+       WHERE r.id = ?
+       LIMIT 1`,
+      [result.insertId]
+    );
 
     return res.status(201).json({
       message: "Resource uploaded successfully",
-      resource,
+      resource: formatResource(rows[0]),
     });
   } catch (error) {
     console.error("createResource error:", error);
@@ -89,26 +120,21 @@ export const createResource = async (req, res) => {
 
 export const getAdminResources = async (req, res) => {
   try {
-    const resources = await prisma.resource.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        company: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          },
-        },
-        uploadedBy: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+    const [rows] = await db.query(
+      `SELECT
+         r.*,
+         c.id AS company_id,
+         c.name AS company_name,
+         c.code AS company_code,
+         u.id AS uploadedBy_id,
+         u.name AS uploadedBy_name
+       FROM \`Resource\` r
+       LEFT JOIN \`Company\` c ON c.id = r.companyId
+       LEFT JOIN \`User\` u ON u.id = r.uploadedById
+       ORDER BY r.createdAt DESC`
+    );
 
-    return res.json({ resources });
+    return res.json({ resources: rows.map(formatResource) });
   } catch (error) {
     console.error("getAdminResources error:", error);
     return res.status(500).json({ message: "Failed to fetch resources" });
@@ -119,50 +145,60 @@ export const getAdvisorResources = async (req, res) => {
   try {
     const { companyId, category, search } = req.query;
 
-    const advisorCompanies = await prisma.advisorCompany.findMany({
-      where: { advisorId: req.user.id },
-      select: { companyId: true },
-    });
+    const [advisorCompanies] = await db.query(
+      `SELECT companyId
+       FROM \`AdvisorCompany\`
+       WHERE advisorId = ?`,
+      [req.user.id]
+    );
 
     const allowedCompanyIds = advisorCompanies.map((item) => item.companyId);
 
-    const where = {
-      isActive: true,
-      OR: [
-        { companyId: null },
-        { companyId: { in: allowedCompanyIds } },
-      ],
-    };
+    const whereParts = ["r.isActive = 1"];
+    const params = [];
+
+    if (allowedCompanyIds.length > 0) {
+      whereParts.push("(r.companyId IS NULL OR r.companyId IN (?))");
+      params.push(allowedCompanyIds);
+    } else {
+      whereParts.push("r.companyId IS NULL");
+    }
 
     if (companyId) {
-      where.companyId = Number(companyId);
+      whereParts.push("r.companyId = ?");
+      params.push(Number(companyId));
     }
 
     if (category) {
-      where.category = category;
+      whereParts.push("r.category = ?");
+      params.push(category);
     }
 
     if (search?.trim()) {
-      where.title = {
-        contains: search.trim(),
-      };
+      whereParts.push("r.title LIKE ?");
+      params.push(`%${search.trim()}%`);
     }
 
-    const resources = await prisma.resource.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        company: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          },
-        },
-      },
-    });
+    const [rows] = await db.query(
+      `SELECT
+         r.*,
+         c.id AS company_id,
+         c.name AS company_name,
+         c.code AS company_code
+       FROM \`Resource\` r
+       LEFT JOIN \`Company\` c ON c.id = r.companyId
+       WHERE ${whereParts.join(" AND ")}
+       ORDER BY r.createdAt DESC`,
+      params
+    );
 
-    return res.json({ resources });
+    return res.json({
+      resources: rows.map((row) => {
+        const formatted = formatResource(row);
+        delete formatted.uploadedBy;
+        return formatted;
+      }),
+    });
   } catch (error) {
     console.error("getAdvisorResources error:", error);
     return res.status(500).json({ message: "Failed to fetch resources" });
@@ -174,16 +210,28 @@ export const updateResourceStatus = async (req, res) => {
     const { id } = req.params;
     const { isActive } = req.body;
 
-    const resource = await prisma.resource.update({
-      where: { id: Number(id) },
-      data: {
-        isActive: Boolean(isActive),
-      },
-    });
+    await db.query(
+      `UPDATE \`Resource\`
+       SET isActive = ?, updatedAt = NOW()
+       WHERE id = ?`,
+      [Boolean(isActive) ? 1 : 0, Number(id)]
+    );
+
+    const [rows] = await db.query(
+      `SELECT * FROM \`Resource\` WHERE id = ? LIMIT 1`,
+      [Number(id)]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Resource not found" });
+    }
 
     return res.json({
       message: "Resource status updated successfully",
-      resource,
+      resource: {
+        ...rows[0],
+        isActive: Boolean(rows[0].isActive),
+      },
     });
   } catch (error) {
     console.error("updateResourceStatus error:", error);
@@ -195,13 +243,16 @@ export const deleteResource = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const resource = await prisma.resource.findUnique({
-      where: { id: Number(id) },
-    });
+    const [rows] = await db.query(
+      `SELECT * FROM \`Resource\` WHERE id = ? LIMIT 1`,
+      [Number(id)]
+    );
 
-    if (!resource) {
+    if (rows.length === 0) {
       return res.status(404).json({ message: "Resource not found" });
     }
+
+    const resource = rows[0];
 
     const fullPath = path.join(process.cwd(), resource.fileUrl.replace(/^\//, ""));
 
@@ -209,9 +260,7 @@ export const deleteResource = async (req, res) => {
       fs.unlinkSync(fullPath);
     }
 
-    await prisma.resource.delete({
-      where: { id: Number(id) },
-    });
+    await db.query(`DELETE FROM \`Resource\` WHERE id = ?`, [Number(id)]);
 
     return res.json({ message: "Resource deleted successfully" });
   } catch (error) {
@@ -219,39 +268,52 @@ export const deleteResource = async (req, res) => {
     return res.status(500).json({ message: "Failed to delete resource" });
   }
 };
+
 export const updateResource = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, category, companyId } = req.body;
 
-    const resource = await prisma.resource.update({
-      where: { id: Number(id) },
-      data: {
-        title: title?.trim(),
-        description: description?.trim() || null,
+    await db.query(
+      `UPDATE \`Resource\`
+       SET title = ?,
+           description = ?,
+           category = ?,
+           companyId = ?,
+           updatedAt = NOW()
+       WHERE id = ?`,
+      [
+        title?.trim(),
+        description?.trim() || null,
         category,
-        companyId: companyId ? Number(companyId) : null,
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          },
-        },
-        uploadedBy: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+        companyId ? Number(companyId) : null,
+        Number(id),
+      ]
+    );
+
+    const [rows] = await db.query(
+      `SELECT
+         r.*,
+         c.id AS company_id,
+         c.name AS company_name,
+         c.code AS company_code,
+         u.id AS uploadedBy_id,
+         u.name AS uploadedBy_name
+       FROM \`Resource\` r
+       LEFT JOIN \`Company\` c ON c.id = r.companyId
+       LEFT JOIN \`User\` u ON u.id = r.uploadedById
+       WHERE r.id = ?
+       LIMIT 1`,
+      [Number(id)]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Resource not found" });
+    }
 
     return res.json({
       message: "Resource updated successfully",
-      resource,
+      resource: formatResource(rows[0]),
     });
   } catch (error) {
     console.error("updateResource error:", error);

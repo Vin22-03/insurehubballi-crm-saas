@@ -1,7 +1,12 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import prisma from "../config/prisma.js";
+import { db } from "../config/db.js";
 
+const normalizeUser = (user) => ({
+  ...user,
+  isActive: Boolean(user.isActive),
+  mustChangePassword: Boolean(user.mustChangePassword),
+});
 
 export const registerAdmin = async (req, res) => {
   try {
@@ -13,32 +18,30 @@ export const registerAdmin = async (req, res) => {
       });
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { phone },
-    });
+    const [existingRows] = await db.query(
+      "SELECT id FROM \`User\` WHERE phone = ? LIMIT 1",
+      [phone]
+    );
 
-    if (existingUser) {
+    if (existingRows.length > 0) {
       return res.status(400).json({ message: "Phone number already exists." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const admin = await prisma.user.create({
-      data: {
-        name,
-        phone,
-        password: hashedPassword,
-        role: "ADMIN",
-      },
-    });
+    const [result] = await db.query(
+      `INSERT INTO \`User\` (name, phone, password, role, isActive, mustChangePassword, createdAt, updatedAt)
+       VALUES (?, ?, ?, 'ADMIN', 1, 0, NOW(), NOW())`,
+      [name, phone, hashedPassword]
+    );
 
     return res.status(201).json({
       message: "Admin created successfully.",
       user: {
-        id: admin.id,
-        name: admin.name,
-        phone: admin.phone,
-        role: admin.role,
+        id: result.insertId,
+        name,
+        phone,
+        role: "ADMIN",
       },
     });
   } catch (error) {
@@ -57,13 +60,19 @@ export const login = async (req, res) => {
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { phone },
-    });
+    const [rows] = await db.query(
+      `SELECT id, name, phone, password, role, isActive, mustChangePassword
+       FROM \`User\`
+       WHERE phone = ?
+       LIMIT 1`,
+      [phone]
+    );
 
-    if (!user) {
+    if (rows.length === 0) {
       return res.status(400).json({ message: "Invalid phone or password." });
     }
+
+    const user = normalizeUser(rows[0]);
 
     if (!user.isActive) {
       return res.status(403).json({ message: "This account is inactive." });
@@ -93,6 +102,7 @@ export const login = async (req, res) => {
         name: user.name,
         phone: user.phone,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       },
     });
   } catch (error) {
@@ -109,40 +119,49 @@ export const forgotPasswordRequest = async (req, res) => {
       return res.status(400).json({ message: "Phone number is required." });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { phone },
-    });
+    const [userRows] = await db.query(
+      "SELECT id, phone FROM \`User\` WHERE phone = ? LIMIT 1",
+      [phone]
+    );
 
-    if (!user) {
-  return res.status(200).json({
-    message: "If the account exists, the password reset request has been submitted.",
-  });
-}
+    if (userRows.length === 0) {
+      return res.status(200).json({
+        message:
+          "If the account exists, the password reset request has been submitted.",
+      });
+    }
 
-    const existingPendingRequest = await prisma.passwordResetRequest.findFirst({
-      where: {
-        userId: user.id,
-        status: "PENDING",
-      },
-    });
+    const user = userRows[0];
 
-    if (existingPendingRequest) {
-  return res.status(200).json({
-    message: "If the account exists, the password reset request has been submitted.",
-  });
-}
+    const [pendingRows] = await db.query(
+      `SELECT id FROM PasswordResetRequest
+       WHERE userId = ? AND status = 'PENDING'
+       LIMIT 1`,
+      [user.id]
+    );
 
-    const resetRequest = await prisma.passwordResetRequest.create({
-      data: {
+    if (pendingRows.length > 0) {
+      return res.status(200).json({
+        message:
+          "If the account exists, the password reset request has been submitted.",
+      });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO PasswordResetRequest
+       (userId, requestedBy, status, createdAt, updatedAt)
+       VALUES (?, ?, 'PENDING', NOW(), NOW())`,
+      [user.id, user.phone]
+    );
+
+    return res.status(201).json({
+      message: "Password reset request sent to admin successfully.",
+      request: {
+        id: result.insertId,
         userId: user.id,
         requestedBy: user.phone,
         status: "PENDING",
       },
-    });
-
-    return res.status(201).json({
-      message: "Password reset request sent to admin successfully.",
-      request: resetRequest,
     });
   } catch (error) {
     console.error("forgotPasswordRequest error:", error);
@@ -152,33 +171,27 @@ export const forgotPasswordRequest = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        mustChangePassword: true,
-        createdAt: true,
-        advisorCompanies: {
-          select: {
-            company: {
-              select: {
-                id: true,
-                code: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const [userRows] = await db.query(
+      `SELECT id, name, phone, role, isActive, mustChangePassword, createdAt
+       FROM \`User\`
+       WHERE id = ?
+       LIMIT 1`,
+      [req.user.id]
+    );
 
-    if (!user) {
+    if (userRows.length === 0) {
       return res.status(404).json({ message: "User not found." });
     }
+
+    const user = normalizeUser(userRows[0]);
+
+    const [companyRows] = await db.query(
+      `SELECT c.id, c.code, c.name
+       FROM AdvisorCompany ac
+       JOIN \`Company\` c ON c.id = ac.companyId
+       WHERE ac.advisorId = ?`,
+      [user.id]
+    );
 
     return res.status(200).json({
       message: "Current user fetched successfully.",
@@ -190,7 +203,7 @@ export const getMe = async (req, res) => {
         isActive: user.isActive,
         mustChangePassword: user.mustChangePassword,
         createdAt: user.createdAt,
-        companies: user.advisorCompanies.map((item) => item.company),
+        companies: companyRows,
       },
     });
   } catch (error) {

@@ -168,7 +168,7 @@ const payload = {
     } catch (error) {
       console.error("Template status toggle failed:", error);
       setErrorMsg(
-        error?.response?.data?.message || "Failed to update template status."
+        error?.response?.data?.message || "Failed to UPDATE \`Template\` status."
       );
     }
   };
@@ -437,7 +437,7 @@ const payload = {
                       </p>
 
                       <h2 className="mt-2 text-2xl font-bold text-slate-900">
-                        {mode === "create" ? "Add New Template" : "Update Template"}
+                        {mode === "create" ? "Add New Template" : "UPDATE Template"}
                       </h2>
 
                       <p className="mt-2 text-sm text-slate-600">
