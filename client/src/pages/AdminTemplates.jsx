@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import AdminShell from "../components/AdminShell";
 import API from "../api/axios";
 import { Pencil, Trash2, Power } from "lucide-react";
+
 const initialForm = {
   companyId: "",
   title: "",
@@ -10,6 +11,8 @@ const initialForm = {
   body: "",
   pdfUrl: "",
 };
+
+const ITEMS_PER_PAGE = 8;
 
 function AdminTemplates() {
   const [companies, setCompanies] = useState([]);
@@ -22,9 +25,10 @@ function AdminTemplates() {
 
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [showPanel, setShowPanel] = useState(false);
-  const [mode, setMode] = useState("create"); // create | edit
+  const [mode, setMode] = useState("create");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const [form, setForm] = useState(initialForm);
@@ -43,9 +47,7 @@ function AdminTemplates() {
       setTemplates(templatesRes.data.templates || []);
     } catch (error) {
       console.error("Failed to load templates data:", error);
-      setErrorMsg(
-        error?.response?.data?.message || "Failed to load templates data."
-      );
+      setErrorMsg(error?.response?.data?.message || "Failed to load templates data.");
     } finally {
       setLoading(false);
     }
@@ -54,6 +56,10 @@ function AdminTemplates() {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, companyFilter]);
 
   const filteredTemplates = useMemo(() => {
     return templates.filter((template) => {
@@ -74,6 +80,16 @@ function AdminTemplates() {
     });
   }, [templates, search, companyFilter]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredTemplates.length / ITEMS_PER_PAGE)
+  );
+
+  const paginatedTemplates = filteredTemplates.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const openCreatePanel = () => {
     setMode("create");
     setSelectedTemplate(null);
@@ -86,14 +102,14 @@ function AdminTemplates() {
   const openEditPanel = (template) => {
     setMode("edit");
     setSelectedTemplate(template);
-   setForm({
-  companyId: String(template.company?.id || ""),
-  title: template.title || "",
-  tagline: template.tagline || "",
-  age: String(template.minAge ?? ""),
-  body: template.body || "",
-  pdfUrl: template.pdfUrl || "",
-});
+    setForm({
+      companyId: String(template.company?.id || ""),
+      title: template.title || "",
+      tagline: template.tagline || "",
+      age: String(template.minAge ?? ""),
+      body: template.body || "",
+      pdfUrl: template.pdfUrl || "",
+    });
     setErrorMsg("");
     setSuccessMsg("");
     setShowPanel(true);
@@ -109,10 +125,7 @@ function AdminTemplates() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSaveTemplate = async (e) => {
@@ -124,19 +137,19 @@ function AdminTemplates() {
       setSuccessMsg("");
 
       const exactAge =
-  form.age !== undefined && form.age !== null && form.age !== ""
-    ? Number(form.age)
-    : null;
+        form.age !== undefined && form.age !== null && form.age !== ""
+          ? Number(form.age)
+          : null;
 
-const payload = {
-  companyId: Number(form.companyId),
-  title: form.title.trim(),
-  tagline: form.tagline.trim(),
-  minAge: exactAge,
-  maxAge: exactAge,
-  body: form.body.trim(),
-  pdfUrl: form.pdfUrl.trim(),
-};
+      const payload = {
+        companyId: Number(form.companyId),
+        title: form.title.trim(),
+        tagline: form.tagline.trim(),
+        minAge: exactAge,
+        maxAge: exactAge,
+        body: form.body.trim(),
+        pdfUrl: form.pdfUrl.trim(),
+      };
 
       if (mode === "create") {
         await API.post("/admin/templates", payload);
@@ -150,9 +163,7 @@ const payload = {
       closePanel();
     } catch (error) {
       console.error("Save template failed:", error);
-      setErrorMsg(
-        error?.response?.data?.message || "Failed to save template."
-      );
+      setErrorMsg(error?.response?.data?.message || "Failed to save template.");
     } finally {
       setSaving(false);
     }
@@ -167,31 +178,74 @@ const payload = {
       await fetchInitialData();
     } catch (error) {
       console.error("Template status toggle failed:", error);
-      setErrorMsg(
-        error?.response?.data?.message || "Failed to UPDATE \`Template\` status."
-      );
+      setErrorMsg(error?.response?.data?.message || "Failed to update template status.");
     }
   };
+
   const handleDeleteTemplate = async (template) => {
-  const confirmed = window.confirm(
-    `Delete template "${template.title}"? This cannot be undone.`
-  );
-
-  if (!confirmed) return;
-
-  try {
-    setErrorMsg("");
-    setSuccessMsg("");
-
-    await API.delete(`/admin/templates/${template.id}`);
-    await fetchInitialData();
-  } catch (error) {
-    console.error("Delete template failed:", error);
-    setErrorMsg(
-      error?.response?.data?.message || "Failed to delete template."
+    const confirmed = window.confirm(
+      `Delete template "${template.title}"? This cannot be undone.`
     );
-  }
-};
+
+    if (!confirmed) return;
+
+    try {
+      setErrorMsg("");
+      setSuccessMsg("");
+
+      await API.delete(`/admin/templates/${template.id}`);
+      await fetchInitialData();
+    } catch (error) {
+      console.error("Delete template failed:", error);
+      setErrorMsg(error?.response?.data?.message || "Failed to delete template.");
+    }
+  };
+
+  const Pagination = () => {
+    if (filteredTemplates.length <= ITEMS_PER_PAGE) return null;
+
+    return (
+      <div className="mt-6 flex flex-col gap-3 rounded-[24px] border border-blue-100 bg-white/80 px-4 py-4 shadow-[0_10px_24px_rgba(37,99,235,0.05)] sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm font-medium text-slate-600">
+          Showing{" "}
+          <span className="font-bold text-slate-900">
+            {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+          </span>{" "}
+          to{" "}
+          <span className="font-bold text-slate-900">
+            {Math.min(currentPage * ITEMS_PER_PAGE, filteredTemplates.length)}
+          </span>{" "}
+          of{" "}
+          <span className="font-bold text-slate-900">
+            {filteredTemplates.length}
+          </span>{" "}
+          templates
+        </p>
+
+        <div className="flex items-center gap-2">
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            className="rounded-2xl border border-blue-100 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Previous
+          </button>
+
+          <span className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">
+            {currentPage} / {totalPages}
+          </span>
+
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            className="rounded-2xl border border-blue-100 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <AdminShell
@@ -237,6 +291,12 @@ const payload = {
         </div>
       ) : null}
 
+      {successMsg ? (
+        <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {successMsg}
+        </div>
+      ) : null}
+
       <div className="hidden overflow-hidden rounded-[28px] border border-blue-100 bg-white/75 shadow-[0_12px_30px_rgba(37,99,235,0.05)] lg:block">
         <div className="overflow-x-auto">
           <table className="min-w-full">
@@ -265,7 +325,7 @@ const payload = {
                   </td>
                 </tr>
               ) : (
-                filteredTemplates.map((template) => (
+                paginatedTemplates.map((template) => (
                   <tr key={template.id} className="border-t border-blue-100">
                     <td className="px-5 py-4">
                       <div className="font-semibold text-slate-900">
@@ -302,37 +362,49 @@ const payload = {
                       )}
                     </td>
 
-              <td className="px-5 py-4">
-  <div className="flex items-center gap-2">
-    <button
-      onClick={() => openEditPanel(template)}
-      title="Edit template"
-      className="rounded-xl border border-blue-200 bg-white p-2 text-slate-700 transition hover:bg-blue-50"
-    >
-      <Pencil size={16} />
-    </button>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          template.isActive
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-red-50 text-red-700"
+                        }`}
+                      >
+                        {template.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
 
-    <button
-      onClick={() => handleToggleStatus(template)}
-      title={template.isActive ? "Deactivate template" : "Activate template"}
-      className={`rounded-xl border bg-white p-2 transition ${
-        template.isActive
-          ? "border-amber-200 text-amber-700 hover:bg-amber-50"
-          : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-      }`}
-    >
-      <Power size={16} />
-    </button>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEditPanel(template)}
+                          title="Edit template"
+                          className="rounded-xl border border-blue-200 bg-white p-2 text-slate-700 transition hover:bg-blue-50"
+                        >
+                          <Pencil size={16} />
+                        </button>
 
-    <button
-      onClick={() => handleDeleteTemplate(template)}
-      title="Delete template"
-      className="rounded-xl border border-red-200 bg-white p-2 text-red-600 transition hover:bg-red-50"
-    >
-      <Trash2 size={16} />
-    </button>
-  </div>
-</td>
+                        <button
+                          onClick={() => handleToggleStatus(template)}
+                          title={template.isActive ? "Deactivate template" : "Activate template"}
+                          className={`rounded-xl border bg-white p-2 transition ${
+                            template.isActive
+                              ? "border-amber-200 text-amber-700 hover:bg-amber-50"
+                              : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          }`}
+                        >
+                          <Power size={16} />
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteTemplate(template)}
+                          title="Delete template"
+                          className="rounded-xl border border-red-200 bg-white p-2 text-red-600 transition hover:bg-red-50"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -351,7 +423,7 @@ const payload = {
             No templates found.
           </div>
         ) : (
-          filteredTemplates.map((template) => (
+          paginatedTemplates.map((template) => (
             <div
               key={template.id}
               className="rounded-[24px] border border-blue-100 bg-white/80 p-4 shadow-sm"
@@ -386,38 +458,40 @@ const payload = {
               </p>
 
               <div className="mt-4 flex items-center gap-2">
-  <button
-    onClick={() => openEditPanel(template)}
-    title="Edit template"
-    className="rounded-xl border border-blue-200 bg-white p-2 text-slate-700"
-  >
-    <Pencil size={16} />
-  </button>
+                <button
+                  onClick={() => openEditPanel(template)}
+                  title="Edit template"
+                  className="rounded-xl border border-blue-200 bg-white p-2 text-slate-700"
+                >
+                  <Pencil size={16} />
+                </button>
 
-  <button
-    onClick={() => handleToggleStatus(template)}
-    title={template.isActive ? "Deactivate template" : "Activate template"}
-    className={`rounded-xl border bg-white p-2 ${
-      template.isActive
-        ? "border-amber-200 text-amber-700"
-        : "border-emerald-200 text-emerald-700"
-    }`}
-  >
-    <Power size={16} />
-  </button>
+                <button
+                  onClick={() => handleToggleStatus(template)}
+                  title={template.isActive ? "Deactivate template" : "Activate template"}
+                  className={`rounded-xl border bg-white p-2 ${
+                    template.isActive
+                      ? "border-amber-200 text-amber-700"
+                      : "border-emerald-200 text-emerald-700"
+                  }`}
+                >
+                  <Power size={16} />
+                </button>
 
-  <button
-    onClick={() => handleDeleteTemplate(template)}
-    title="Delete template"
-    className="rounded-xl border border-red-200 bg-white p-2 text-red-600"
-  >
-    <Trash2 size={16} />
-  </button>
-</div>
+                <button
+                  onClick={() => handleDeleteTemplate(template)}
+                  title="Delete template"
+                  className="rounded-xl border border-red-200 bg-white p-2 text-red-600"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
           ))
         )}
       </div>
+
+      <Pagination />
 
       {showPanel && (
         <div className="fixed inset-0 z-50">
@@ -437,7 +511,7 @@ const payload = {
                       </p>
 
                       <h2 className="mt-2 text-2xl font-bold text-slate-900">
-                        {mode === "create" ? "Add New Template" : "UPDATE Template"}
+                        {mode === "create" ? "Add New Template" : "Update Template"}
                       </h2>
 
                       <p className="mt-2 text-sm text-slate-600">
@@ -461,11 +535,7 @@ const payload = {
                     </div>
                   ) : null}
 
-                  <form
-                    id="template-form"
-                    onSubmit={handleSaveTemplate}
-                    className="space-y-5"
-                  >
+                  <form id="template-form" onSubmit={handleSaveTemplate} className="space-y-5">
                     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                       <div>
                         <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -528,20 +598,19 @@ const payload = {
                         />
                       </div>
 
-                      
-                     <div>
-  <label className="mb-2 block text-sm font-semibold text-slate-700">
-    Age
-  </label>
-  <input
-    type="number"
-    name="age"
-    value={form.age}
-    onChange={handleInputChange}
-    placeholder="e.g. 25"
-    className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-  />
-</div>
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-slate-700">
+                          Age
+                        </label>
+                        <input
+                          type="number"
+                          name="age"
+                          value={form.age}
+                          onChange={handleInputChange}
+                          placeholder="e.g. 25"
+                          className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                        />
+                      </div>
                     </div>
 
                     <div>

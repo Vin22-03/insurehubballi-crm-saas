@@ -8,7 +8,8 @@ const getProfile = async (req, res) => {
     const userId = req.user.id;
 
     const [userRows] = await db.query(
-      `SELECT id, name, phone, email, photoUrl, dob, bio, role, isActive, createdAt
+      `SELECT id, name, phone, email, photoUrl, brandLogoUrl, dob, bio, role, isActive, createdAt,
+       brandName, officeAddress, advisorRole
        FROM \`User\`
        WHERE id = ?
        LIMIT 1`,
@@ -39,8 +40,12 @@ const getProfile = async (req, res) => {
       phone: user.phone,
       email: user.email,
       photoUrl: user.photoUrl,
+      brandLogoUrl: user.brandLogoUrl,
       dob: user.dob,
       bio: user.bio,
+      brandName: user.brandName,
+      officeAddress: user.officeAddress,
+      advisorRole: user.advisorRole,
       role: user.role,
       isActive: Boolean(user.isActive),
       createdAt: user.createdAt,
@@ -63,10 +68,10 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { email, dob, bio } = req.body;
+    const { email, dob, bio, brandName, officeAddress, advisorRole } = req.body;
 
     const [existingRows] = await db.query(
-      `SELECT id, photoUrl FROM \`User\` WHERE id = ? LIMIT 1`,
+      `SELECT id, photoUrl, brandLogoUrl FROM \`User\` WHERE id = ? LIMIT 1`,
       [userId]
     );
 
@@ -75,8 +80,20 @@ const updateProfile = async (req, res) => {
     }
 
     let finalPhotoUrl = existingRows[0].photoUrl;
+    let finalBrandLogoUrl = existingRows[0].brandLogoUrl;
 
-    if (req.file) {
+    const profileFile = req.files?.photo?.[0];
+    const brandLogoFile = req.files?.brandLogo?.[0];
+
+    if (req.body.removePhoto === "true") {
+  finalPhotoUrl = null;
+}
+
+if (req.body.removeBrandLogo === "true") {
+  finalBrandLogoUrl = null;
+}
+
+    if (profileFile) {
       const uploadsDir = path.join(process.cwd(), "uploads", "profiles");
 
       if (!fs.existsSync(uploadsDir)) {
@@ -86,7 +103,7 @@ const updateProfile = async (req, res) => {
       const fileName = `user-${userId}-${Date.now()}.webp`;
       const outputPath = path.join(uploadsDir, fileName);
 
-      await sharp(req.file.buffer)
+      await sharp(profileFile.buffer)
         .resize(500, 500, { fit: "cover", position: "centre" })
         .webp({ quality: 90 })
         .toFile(outputPath);
@@ -94,16 +111,38 @@ const updateProfile = async (req, res) => {
       finalPhotoUrl = `/uploads/profiles/${fileName}`;
     }
 
+    if (brandLogoFile) {
+      const uploadsDir = path.join(process.cwd(), "uploads", "brands");
+
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const fileName = `brand-${userId}-${Date.now()}.webp`;
+      const outputPath = path.join(uploadsDir, fileName);
+
+      await sharp(brandLogoFile.buffer)
+        .resize(400, 400, { fit: "contain", background: "#ffffff" })
+        .webp({ quality: 90 })
+        .toFile(outputPath);
+
+      finalBrandLogoUrl = `/uploads/brands/${fileName}`;
+    }
+
     try {
       await db.query(
         `UPDATE \`User\`
-         SET email = ?, dob = ?, bio = ?, photoUrl = ?, updatedAt = NOW()
+         SET email = ?, dob = ?, bio = ?, brandName = ?, officeAddress = ?, advisorRole = ?, photoUrl = ?, brandLogoUrl = ?, updatedAt = NOW()
          WHERE id = ?`,
         [
           email?.trim() || null,
           dob ? new Date(dob) : null,
           bio?.trim() || null,
+          brandName?.trim() || null,
+          officeAddress?.trim() || null,
+          advisorRole?.trim() || null,
           finalPhotoUrl,
+          finalBrandLogoUrl,
           userId,
         ]
       );
@@ -115,7 +154,8 @@ const updateProfile = async (req, res) => {
     }
 
     const [updatedRows] = await db.query(
-      `SELECT id, name, phone, email, photoUrl, dob, bio, role, isActive, createdAt
+      `SELECT id, name, phone, email, photoUrl, brandLogoUrl, dob, bio, role, isActive, createdAt,
+       brandName, officeAddress, advisorRole
        FROM \`User\`
        WHERE id = ?
        LIMIT 1`,

@@ -20,12 +20,20 @@ function ProfileContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState("");
+  const [logoPreview, setLogoPreview] = useState("");
+  const [removePhoto, setRemovePhoto] = useState(false);
+  const [removeBrandLogo, setRemoveBrandLogo] = useState(false);
   const [error, setError] = useState("");
+  const BASE_URL = import.meta.env.VITE_API_URL || "";
   const [form, setForm] = useState({
     email: "",
     dob: "",
     bio: "",
+    brandName: "",
+    officeAddress: "",
+    advisorRole: "",
     photo: null,
+    brandLogo: null,
   });
 
   const fetchProfile = async () => {
@@ -35,13 +43,20 @@ function ProfileContent() {
 
       setProfile(res.data);
       setPreview(
-        res.data.photoUrl ? `http://localhost:5000${res.data.photoUrl}` : ""
+        res.data.photoUrl ? `${BASE_URL}${res.data.photoUrl}` : ""
       );
+      setLogoPreview(
+  res.data.brandLogoUrl ? `${BASE_URL}${res.data.brandLogoUrl}` : ""
+);
       setForm({
         email: res.data.email || "",
         dob: res.data.dob ? res.data.dob.slice(0, 10) : "",
         bio: res.data.bio || "",
         photo: null,
+        brandLogo: null,
+        brandName: res.data.brandName || "",
+        officeAddress: res.data.officeAddress || "",
+        advisorRole: res.data.advisorRole || "",
       });
     } catch (err) {
       console.error("fetchProfile error:", err);
@@ -74,6 +89,11 @@ function ProfileContent() {
       setPreview(URL.createObjectURL(files[0]));
       return;
     }
+    if (name === "brandLogo" && files?.[0]) {
+  setForm((prev) => ({ ...prev, brandLogo: files[0] }));
+  setLogoPreview(URL.createObjectURL(files[0]));
+  return;
+}
 
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -86,10 +106,23 @@ function ProfileContent() {
       data.append("email", form.email);
       data.append("dob", form.dob);
       data.append("bio", form.bio);
+      data.append("brandName", form.brandName);
+      data.append("officeAddress", form.officeAddress);
+      data.append("advisorRole", form.advisorRole);
 
       if (form.photo) {
         data.append("photo", form.photo);
       }
+      if (form.brandLogo) {
+  data.append("brandLogo", form.brandLogo);
+}
+if (removePhoto) {
+  data.append("removePhoto", "true");
+}
+
+if (removeBrandLogo) {
+  data.append("removeBrandLogo", "true");
+}
 
       await API.put("/profile/me", data, {
         headers: {
@@ -99,6 +132,8 @@ function ProfileContent() {
 
       await fetchProfile();
       alert("Profile updated successfully");
+      setRemovePhoto(false);
+      setRemoveBrandLogo(false);
     } catch (err) {
       console.error("handleSave error:", err);
       alert(err?.response?.data?.message || "Failed to update profile");
@@ -152,7 +187,7 @@ function ProfileContent() {
                       {initials || <UserCircle2 size={72} />}
                     </div>
                   )}
-                </div>
+                   </div>  
 
                 <label className="absolute -bottom-2 -right-2 flex h-12 w-12 cursor-pointer items-center justify-center rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[0.98]">
                   <Camera size={18} />
@@ -165,6 +200,20 @@ function ProfileContent() {
                   />
                 </label>
               </div>
+              {preview && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreview("");
+                        setForm((prev) => ({ ...prev, photo: null }));
+                        setRemovePhoto(true);
+                      }}
+                      className="mt-3 text-xs text-red-600 hover:underline"
+                    >
+                      Remove Photo
+                    </button>
+                  )}
+                  
 
               <div className="mt-5 flex items-center gap-2">
                 <span
@@ -201,12 +250,24 @@ function ProfileContent() {
                 value={profile.email || "No email added yet"}
               />
               <InfoRow
-  icon={<CalendarDays size={18} className="text-blue-700" />}
-  label="Joining Date"
-  value={
-    profile.dob
-      ? new Date(profile.dob).toLocaleDateString("en-IN")
-      : "Not added yet"
+                icon={<Building2 size={18} className="text-blue-700" />}
+                label="Brand"
+                value={profile.brandName || profile.name || "Not added yet"}
+              />
+
+              <InfoRow
+                icon={<Building2 size={18} className="text-blue-700" />}
+                label="Office Address"
+                value={profile.officeAddress || "Not added yet"}
+              />
+
+              <InfoRow  
+                icon={<CalendarDays size={18} className="text-blue-700" />}
+                label="Joining Date"
+                value={
+                  profile.dob
+                    ? new Date(profile.dob).toLocaleDateString("en-IN")
+                    : "Not added yet"
   }
 />
             </div>
@@ -320,6 +381,68 @@ function ProfileContent() {
                 className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
               />
             </Field>
+            <Field label="Brand Name">
+              <input
+                name="brandName"
+                value={form.brandName}
+                onChange={handleChange}
+                placeholder="Example: SagarCare"
+                className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </Field>
+            <Field label="Brand Logo">
+              <input
+                type="file"
+                name="brandLogo"
+                accept="image/*"
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none"
+              />
+              {logoPreview && (
+  <div className="mt-3 flex items-center gap-3">
+    <img
+      src={logoPreview}
+      alt="brand logo preview"
+      className="h-16 w-16 rounded-2xl border border-blue-100 bg-white object-contain p-2"
+    />
+
+    <button
+      type="button"
+      onClick={() => {
+        setLogoPreview("");
+        setForm((prev) => ({ ...prev, brandLogo: null }));
+        setRemoveBrandLogo(true);
+      }}
+      className="text-xs text-red-600 hover:underline"
+    >
+      Remove Logo
+    </button>
+  </div>
+)}
+            </Field>
+
+<Field label="Advisor Role">
+  <input
+    name="advisorRole"
+    value={form.advisorRole}
+    onChange={handleChange}
+    placeholder="Example: Health Insurance Advisor"
+    className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+  />
+</Field>
+
+<div className="xl:col-span-2">
+  <Field label="Office Address">
+    <textarea
+      name="officeAddress"
+      value={form.officeAddress}
+      onChange={handleChange}
+      rows={3}
+      placeholder="Enter office address"
+      className="w-full resize-none rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+    />
+  </Field>
+</div>
 
             <div className="xl:col-span-2">
               <Field label="Bio">

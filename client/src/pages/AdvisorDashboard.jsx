@@ -190,7 +190,7 @@ function AdvisorDashboard() {
 
   const advisorUrlLine =
   isTataAig && advisorChatflowUrl
-    ? `\n\n${advisorChatflowUrl}`
+    ? `\n\nFor more information, please chat with *Shreya* \n${advisorChatflowUrl}`
     : "";
 
   const finalMessage = `Dear *${form.clientName || "Client"}*,
